@@ -1,0 +1,1056 @@
+---
+title: "Experiment 1 Analysis"
+author: "Shuchen Wu"
+date: "05/07/2021"
+output: html_document
+---
+
+
+```{r}
+#plyr can be used to manipulate data frames
+library(plyr)
+#ggplot is good for plotting
+library(ggplot2)
+#lmerTest loads mixed effects regressions and according t/z-tests
+library(lmerTest)
+library(stringi)
+library(stringr)
+library(lsr)
+#dat<-read.csv('/kyb/rg/swu/Nextcloud/Documents/chunking/data/data/ync/data_filtered.csv')
+dat<-read.csv('/kyb/rg/swu/Nextcloud/Documents/chunking/data/data_plos_exp12/filtered_exp1.csv')
+
+```
+
+condition = 2: c2_key [12] [3] [4]
+condition = 1: c3_key [123] [4]
+condition = 0: indep_key [1] [2] [3] [4]
+```{r}
+#full data set without high RTs excluded
+dl1<-dat
+#excluding RTs
+dl<-subset(dat, timecollect<=1000)
+#what's the difference
+1-nrow(dl)/nrow(dl1)
+```
+
+
+```{r}
+ggplot(data  = dat,
+       aes(x = userpress,
+           y = timecollect,
+           col = correctcollect,))+
+    geom_point(size = 0.05,
+             alpha = .8,
+             position = "jitter")+# to add some random noise for plotting purposes
+    ylim(0,1500) + 
+    geom_smooth(method = lm,
+              se     = FALSE, 
+              col    = "black",
+              size   = .5, 
+              alpha  = .8)+ # to add regression line  
+    theme_minimal()+#make background white
+    theme(legend.position = "left")+# remove the location of the legend
+  scale_color_gradientn(colours = rainbow(2))+
+  labs(title = "instruction and reaction time",
+       subtitle = "with correctness using colors to denote")
+
+```
+
+```{r}
+
+library(stringi)
+library(stringr)
+library(lsr)
+
+#remove braces
+dat$keyassignment<-str_replace(dat$keyassignment, '\\[', '')
+dat$keyassignment<-str_replace(dat$keyassignment, '\\]', '')
+
+#current instruction
+dat$current<-dat$instructioncollect
+
+#last instruction
+dat$last<-c(1, paste(dat$instructioncollect[-nrow(dat)]))
+
+#only look at neutral blocks
+dd<-dat[dat$block %in% c(1,2,9,10),]
+dd$condition<-ifelse(dd$condition==0, "indep", dd$condition)
+dd$condition<-ifelse(dd$condition==1, "c3", dd$condition)
+dd$condition<-ifelse(dd$condition==2, "c2", dd$condition)
+
+#remove first trial per block, since that doesn't have previous instruction
+dd<-subset(dd, trialcollect!=1)
+
+#get A, B, C, and D
+a<-substr(dd$keyassignment, 2, 2)
+b<-substr(dd$keyassignment, 7, 7)
+c<-substr(dd$keyassignment, 12, 12)
+d<-substr(dd$keyassignment, 17, 17)
+
+#label first and last two blocks
+dd$block<-rep(rep(c("first", "last"), each=198), length(unique(dat$id)))
+
+#creat signed Cohen's d
+mycohen<-function(x, y){
+  #needs to be longer than 3
+  if (length(x)>4 & length(y>4)){
+  #Cohen's d  
+  d<-cohensD(x, y)
+  #sign based on mean
+  if (mean(x)<mean(y)){d<- -d}
+  }else { d<-NA}#NA if smaller than 3
+  #return d
+  return(d)
+}
+
+#mark all chunks and their controls
+dd$chunkab<-ifelse((dd$last==a & dd$current==b), 1, 0)
+dd$controlab<-ifelse((dd$last!=a & dd$current!=b), 1, 0)
+dd$chunkcd<-ifelse((dd$last==c & dd$current==d), 1, 0)
+dd$controlcd<-ifelse((dd$last!=c & dd$current!=d), 1, 0)
+dd$chunkbc<-ifelse((dd$last==b & dd$current==c), 1, 0)
+dd$controlbc<-ifelse((dd$last!=b & dd$current!=c), 1, 0)
+dd$chunkda<-ifelse((dd$last==d & dd$current==a), 1, 0)
+dd$controlda<-ifelse((dd$last!=d & dd$current!=a), 1, 0)
+
+#we select RTs smaller than 1000ms
+tselect<-1000
+
+#get all Cohen's ds
+dchunkab<-ddply(subset(dd, chunkab==1 & timecollect<=tselect), ~id, summarize,
+                d=mycohen(timecollect[block=="first"], timecollect[block=="last"]))$d# get the dth column from the 
+
+dchunkabcontrol<-ddply(subset(dd, controlab==1 & timecollect<=tselect), ~id, summarize, 
+                d=mycohen(timecollect[block=="first"], timecollect[block=="last"]))$d
+
+dchunkcd<-ddply(subset(dd, chunkcd==1 & timecollect<=tselect), ~id, summarize, 
+                d=mycohen(timecollect[block=="first"], timecollect[block=="last"]))$d
+
+dchunkcdcontrol<-ddply(subset(dd, controlcd==1 & timecollect<=tselect), ~id, summarize, 
+                       d=mycohen(timecollect[block=="first"], timecollect[block=="last"]))$d
+
+dchunkbc<-ddply(subset(dd, chunkbc==1 & timecollect<=tselect), ~id, summarize, 
+                d=mycohen(timecollect[block=="first"], timecollect[block=="last"]))$d
+
+dchunkbccontrol<-ddply(subset(dd, controlbc==1 & timecollect<=tselect), ~id, summarize, 
+                       d=mycohen(timecollect[block=="first"], timecollect[block=="last"]))$d
+
+dchunkda<-ddply(subset(dd, chunkda==1 & timecollect<=tselect), ~id, summarize, 
+                d=mycohen(timecollect[block=="first"], timecollect[block=="last"]))$d
+
+dchunkdacontrol<-ddply(subset(dd, controlda==1 & timecollect<=tselect), ~id, summarize, 
+                d=mycohen(timecollect[block=="first"], timecollect[block=="last"]))$d
+
+
+```
+
+```{r}
+data_summary <- function(data, varname, groupnames){
+  require(plyr)
+  summary_func <- function(x, col){
+    c(mean = mean(x[[col]], na.rm=TRUE),
+      sd = sd(x[[col]]/sqrt(length(x[[col]])), na.rm=TRUE))
+  }
+  data_sum<-ddply(data, groupnames, .fun=summary_func,
+                  varname)
+  data_sum <- rename(data_sum, c("mean" = varname))
+ return(data_sum)
+}
+
+ddsum <- data_summary(dd, varname="timecollect", 
+                    groupnames=c("condition", "block","chunkab","controlab", "chunkbc", "controlbc", "chunkcd","controlcd", "chunkda", "controlda"))
+# Convert dose to a factor variable
+head(ddsum)
+
+```
+```{r}
+
+```
+
+Now try to plot them together on one plot
+```{r}
+ddabrt<-subset(dd, chunkab==1 & timecollect<=tselect)
+ddabrtsum <- data_summary(ddabrt, varname="timecollect", groupnames=c("condition", "block"))
+ddabrtsum$ck <- rep("ab",times=6)
+ddnabrt<-subset(dd, controlab==1 & timecollect<=tselect)
+ddnabrtsum <- data_summary(ddnabrt, varname="timecollect", groupnames=c("condition", "block"))
+ddnabrtsum$ck <- rep("nab",times=6)
+
+ddabckrtsum<-rbind(ddabrtsum,ddnabrtsum)
+library(ggplot2)
+#library(hrbrthemes)
+ 
+# Graph
+ggplot(ddabckrtsum, aes(fill=block, y=timecollect, x=condition)) + 
+    geom_bar(position="dodge", color="black", stat="identity") +
+    geom_errorbar(aes(ymin=timecollect-sd, ymax=timecollect+sd), width=.2,
+                 position=position_dodge(.9)) +
+    ggtitle("ab and control") +
+    facet_wrap(~ck) +
+     theme_classic() +
+   scale_fill_manual(labels = c("Baseline", "Test"),values=c('#999999','#E69F00'))+
+    xlab("Condition") + ylab("Reaction Time")
+```
+```{r}
+ddbcrt<-subset(dd, chunkbc==1 & timecollect<=tselect)
+ddbcrtsum <- data_summary(ddbcrt, varname="timecollect", groupnames=c("condition", "block"))
+ddbcrtsum$ck <- rep("bc",times=6)
+ddnbcrt<-subset(dd, controlbc==1 & timecollect<=tselect)
+ddnbcrtsum <- data_summary(ddnbcrt, varname="timecollect", groupnames=c("condition", "block"))
+ddnbcrtsum$ck <- rep("nbc",times=6)
+ddbcckrtsum<-rbind(ddbcrtsum,ddnbcrtsum) # combine the two dataframe into one
+
+
+# Graph
+ggplot(ddbcckrtsum, aes(fill=block, y=timecollect, x=condition)) + 
+    geom_bar(position="dodge", color="black", stat="identity") +
+    geom_errorbar(aes(ymin=timecollect-sd, ymax=timecollect+sd), width=.2,
+                 position=position_dodge(.9)) +
+    ggtitle("bc and control") +
+    facet_wrap(~ck) +
+     theme_classic() +
+   scale_fill_manual(labels = c("Baseline", "Test"),values=c('#999999','#E69F00'))+
+    xlab("Condition") + ylab("Reaction Time")
+```
+```{r}
+ddcdrt<-subset(dd, chunkcd==1 & timecollect<=tselect)
+ddcdrtsum <- data_summary(ddcdrt, varname="timecollect", groupnames=c("condition", "block"))
+ddcdrtsum$ck <- rep("cd",times=6)
+ddncdrt<-subset(dd, controlcd==1 & timecollect<=tselect)
+ddncdrtsum <- data_summary(ddncdrt, varname="timecollect", groupnames=c("condition", "block"))
+ddncdrtsum$ck <- rep("ncd",times=6)
+ddcdckrtsum<-rbind(ddcdrtsum,ddncdrtsum) # combine the two dataframe into one
+
+
+# Graph
+ggplot(ddcdckrtsum, aes(fill=block, y=timecollect, x=condition)) + 
+    geom_bar(position="dodge", color="black", stat="identity") +
+    geom_errorbar(aes(ymin=timecollect-sd, ymax=timecollect+sd), width=.2,
+                 position=position_dodge(.9)) +
+    ggtitle("cd and control") +
+    facet_wrap(~ck) +
+     theme_classic() +
+   scale_fill_manual(labels = c("Baseline", "Test"),values=c('#999999','#E69F00'))+
+    xlab("Condition") + ylab("Reaction Time")
+```
+```{r}
+dddart<-subset(dd, chunkda==1 & timecollect<=tselect)
+dddartsum <- data_summary(dddart, varname="timecollect", groupnames=c("condition", "block"))
+dddartsum$ck <- rep("da",times=6)
+ddndart<-subset(dd, controlda==1 & timecollect<=tselect)
+ddndartsum <- data_summary(ddndart, varname="timecollect", groupnames=c("condition", "block"))
+ddndartsum$ck <- rep("nda",times=6)
+dddackrtsum<-rbind(dddartsum,ddndartsum) # combine the two dataframe into one
+
+
+# Graph
+ggplot(dddackrtsum, aes(fill=block, y=timecollect, x=condition)) + 
+    geom_bar(position="dodge", color="black", stat="identity") +
+    geom_errorbar(aes(ymin=timecollect-sd, ymax=timecollect+sd), width=.2,
+                 position=position_dodge(.9)) +
+    ggtitle("da and control") +
+    facet_wrap(~ck) +
+     theme_classic() +
+   scale_fill_manual(labels = c("Baseline", "Test"),values=c('#999999','#E69F00'))+
+    xlab("Condition") + ylab("Reaction Time")
+```
+
+
+```{r}
+# Default bar plot
+p<- ggplot(ddsum[which(ddsum$chunkab==1), ], aes(x=condition, y=timecollect, fill=block)) + 
+  geom_bar(stat="identity", color="black", 
+           position=position_dodge()) +
+  geom_errorbar(aes(ymin=timecollect-sd, ymax=timecollect+sd), width=.2,
+                 position=position_dodge(.9))
+# Finished bar plot
+p+labs(title="Reaction Time Change between Baseline and Test Blocks Responding to [a b]", x="Condition", y = "Reaction Time (ms)")+
+   theme_classic() +
+   scale_fill_manual(values=c('#999999','#E69F00'))
+
+# TODO: change the xlabel names 
+```
+want to combine rtab and rtnab into one dataframe. 
+```{r}
+#barplot(height=c(ddsum[which(ddsum$chunkab==1),],ddsum[which(ddsum$controlab==1),])$timecollect)
+```
+
+Plot the change of mean reaction time between the beasline and the test block
+```{r}
+
+```
+
+
+```{r}
+tsrtab<-subset(dd, chunkab==1 & timecollect<=tselect & block=="last" )#$timecollect
+blrtabcontrol<-subset(dd, controlab==1 & timecollect<=tselect & block=="first" )#$timecollect
+tsrtabcontrol<-subset(dd, controlab==1 & timecollect<=tselect & block=="last" )#$timecollect
+```
+
+```{r}
+
+#labe condition
+# ddply(dat, ~id, summarize, cond=trialinstruction[201]) sort based on condition
+#cond<-ddply(dat, ~id, summarize, cond=condition[201])$cond
+
+cond<-ifelse(ddply(dat, ~id, summarize, cond=condition[201])$cond==0, "Independent", "None")
+cond<-ifelse(ddply(dat, ~id, summarize, cond=condition[201])$cond==1, "c3", cond)
+cond<-ifelse(ddply(dat, ~id, summarize, cond=condition[201])$cond==2, "c2", cond)
+
+setting<-ddply(dat, ~id, summarize, cond=condition[201])
+
+#for true delta, we need to subtract control
+
+data_delta<-data.frame(dchange=c(dchunkab - dchunkabcontrol),cond=rep(cond, 1), set = rep(ddply(dat, ~id, summarize, cond=condition[201])$cond,1),id=rep(ddply(dat, ~id, summarize, cond=condition[201])$id, 1),
+               trans=rep(c('high'), length(dchunkab)))
+
+#data_delta$setting<-setting
+#data_delta$cond<-as.factor(data_delta$cond)
+data_delta$cond <- factor(data_delta$cond,                                    # Change ordering manually
+                  levels = c("Independent", "c2", "c3"))
+#fit without condition
+m1<-lm(dchange~1, data=data_delta)
+#with condition
+m2<-lm(dchange~cond, data=na.omit(data_delta))
+#which one is better?
+anova(m1,m2)
+```
+```{r}
+#summarize data by condition
+#summarize data for plotting
+#standard error function
+layout(matrix(c(1,2), 1, 2, byrow = TRUE))
+se<-function(x){sd(x)/sqrt(length(x))}
+
+dp<-ddply(data_delta, ~cond, summarize, m=mean(na.omit(dchange)),
+          se=se(na.omit(dchange)))
+
+dp$cond <- factor(dp$cond,                                    # Change ordering manually
+                  levels = c("Independent", "c2", "c3"))
+#create plot
+p3 <- ggplot(dp, aes(y=m, x=cond, fill=cond)) +
+  #mean 
+  stat_summary(fun = mean, geom = "bar", position = "dodge", color='black', width=0.5) + 
+  geom_point()+
+  #error bars
+  geom_errorbar(aes(ymin=m-se, ymax=m+se),color='black', width = .25, position=position_dodge((width=0.9))) +
+  #text, expression changes the Delta to a Greek letter
+  ylab(expression(Delta~"d"))+
+  #xlab
+  xlab("Condition")+ 
+  #theme
+  theme_classic()+#
+  #color scheme
+  scale_fill_manual(values=(c("#F0F8FA", "#83C5BE","#00707A")))+
+  #theme
+  theme(text = element_text(size=21,  family="sans"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="none")+
+  #no legend
+  guides(color="none", shape="none")+
+  geom_hline(yintercept=0)+
+  #scale y
+  scale_y_continuous(expand = c(0,0),
+                     limits = c(-0.1,0.5)) +
+  #title
+  ggtitle("Chunky boost: AB")+
+  coord_fixed(4.5)
+#show!
+p3
+```
+```{r}
+data_delta$cond <- factor(data_delta$cond,                                    # Change ordering manually
+                  levels = c("Independent", "c2", "c3"))
+#fit without condition
+m1<-lm(dchange~1, data=data_delta)
+#with condition
+m2<-lm(dchange~cond, data=na.omit(data_delta))
+#which one is better?
+anova(m1,m2)
+# Plot Chunk Frequency
+```
+```{r}
+data_delta$cond <- factor(data_delta$cond,                                    # Relevel to c2
+                  levels = c("c2", "Independent", "c3"))
+m2<-lm(dchange~cond, data=na.omit(data_delta))
+#which one is better?
+summary(m2)
+# Plot Chunk Frequency
+```
+
+```{r}
+
+
+#summarize data by condition
+#summarize data for plotting
+#standard error function
+
+#for true delta, we need to subtract control
+
+data_delta<-data.frame(dchange=c(dchunkbc - dchunkbccontrol),cond=rep(cond, 1), set = rep(ddply(dat, ~id, summarize, cond=condition[201])$cond,1),id=rep(ddply(dat, ~id, summarize, cond=condition[201])$id, 1),
+               trans=rep(c('medium'), length(dchunkdacontrol)))
+
+se<-function(x){sd(x)/sqrt(length(x))}
+
+dp<-ddply(na.omit(data_delta), ~cond, summarize, m=mean(dchange),
+          se=se(dchange))
+
+dp$cond <- factor(dp$cond,                                    # Change ordering manually
+                  levels = c("Independent", "c2", "c3"))
+
+#create plot
+p4 <- ggplot(dp, aes(y=m, x=cond, fill=cond)) +
+  #mean 
+  stat_summary(fun = mean, geom = "bar", position = "dodge", color='black', width=0.5) + 
+  geom_point()+
+  #error bars
+  geom_errorbar(aes(ymin=m-se, ymax=m+se),color='black', width = .25, position=position_dodge((width=0.9))) +
+  #text, expression changes the Delta to a Greek letter
+  ylab(expression(Delta~"d"))+
+  #xlab
+  xlab("Condition")+ 
+  #theme
+  theme_classic()+#
+  #color scheme
+  scale_fill_manual(values=(c("#F0F8FA", "#83C5BE","#00707A")))+
+  #theme
+  theme(text = element_text(size=21,  family="sans"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="none")+
+  #no legend
+  guides(color="none", shape="none")+
+  geom_hline(yintercept=0)+
+  #scale y
+  scale_y_continuous(expand = c(0,0),
+                     limits = c(-0.25,0.5)) +
+  #title
+  ggtitle("Chunky boost BC") +
+  coord_fixed(4.5)
+#show!
+p4
+```
+
+```{r}
+data_delta$cond <- factor(data_delta$cond,                                    # Change ordering manually
+                  levels = c("Independent", "c2", "c3"))
+#fit without condition
+m1<-lm(dchange~1, data=data_delta)
+#with condition
+m2<-lm(dchange~cond, data=na.omit(data_delta))
+#which one is better?
+anova(m1,m2)
+# Plot Chunk Frequency
+```
+
+
+```{r}
+ckfq<-read.csv('/kyb/rg/swu/Nextcloud/Documents/chunking/data/data_plos_exp12/exp1dckfq.csv')
+
+ckfq$condition<-ifelse(ckfq$condition==0, "Independent", ckfq$condition)
+ckfq$condition<-ifelse(ckfq$condition==1, "c3", ckfq$condition)
+ckfq$condition<-ifelse(ckfq$condition==2, "c2", ckfq$condition)
+ckfq$condition <- factor(ckfq$condition,                                    # Change ordering manually
+                  levels = c("Independent", "c2", "c3"))
+ckfq$chunk<-ifelse(ckfq$chunk==123, "abc", ckfq$chunk)
+ckfq$chunk<-ifelse(ckfq$chunk==12, "ab", ckfq$chunk)
+ckfqab<-subset(ckfq, chunk=="ab")
+
+#for true delta, we need to subtract control
+
+se<-function(x){sd(x)/sqrt(length(x))}
+
+dp<-ddply(na.omit(ckfqab), ~condition, summarize, m=mean(tr),
+          se=se(tr))
+
+dp$cond <- factor(dp$cond,                                    # Change ordering manually
+                  levels = c("Independent", "c2", "c3"))
+
+#create plot
+p5 <- ggplot(dp, aes(y=m, x=cond, fill=cond)) +
+  #mean 
+  stat_summary(fun = mean, geom = "bar", position = "dodge", color='black', width=0.5) + 
+  geom_point()+
+  #error bars
+  geom_errorbar(aes(ymin=m-se, ymax=m+se),color='black', width = .25, position=position_dodge((width=0.9))) +
+  #text, expression changes the Delta to a Greek letter
+  ylab("N")+
+  #xlab
+  xlab("Condition")+ 
+  #theme
+  theme_classic()+#
+  #color scheme
+  scale_fill_manual(values=(c("#F0F8FA", "#83C5BE","#00707A")))+
+  #theme
+  theme(text = element_text(size=21,  family="sans"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="none")+
+  #no legend
+  guides(color="none", shape="none")+
+  #scale y
+  geom_hline(yintercept=0)+
+  #scale y
+  scale_y_continuous(expand = c(0,0),
+                     limits = c(0,90)) +
+  #title
+  ggtitle("N Chunk AB") +
+  coord_fixed(0.04)
+#show!
+p5
+```
+
+```{r}
+ckfqab$condition <- factor(ckfqab$condition,                                    # Change ordering manually
+                  levels = c("Independent", "c2", "c3"))
+#null model doesn't contain condition, but fixed and random intercept
+mnull<-lm(tr~1 , data=ckfqab)
+#alternative model contains condition is fixed effect
+ma<-lm(tr~condition, data=ckfqab)
+#is the alternative model significantly better than the null model
+anova(mnull, ma)#yes!
+```
+
+```{r}
+ckfq<-read.csv('/kyb/rg/swu/Nextcloud/Documents/chunking/data/data_plos_exp12/exp1dckfq.csv')
+
+ckfq$condition<-ifelse(ckfq$condition==0, "Independent", ckfq$condition)
+ckfq$condition<-ifelse(ckfq$condition==1, "c3", ckfq$condition)
+ckfq$condition<-ifelse(ckfq$condition==2, "c2", ckfq$condition)
+ckfq$condition<-factor(ckfq$condition, levels = c("Independent","c2","c3"))
+
+ckfq$chunk<-ifelse(ckfq$chunk==123, "abc", ckfq$chunk)
+ckfq$chunk<-ifelse(ckfq$chunk==12, "ab", ckfq$chunk)
+ckfqabc<-subset(ckfq, chunk=="abc")
+
+#for true delta, we need to subtract control
+
+se<-function(x){sd(x)/sqrt(length(x))}
+
+dp<-ddply(na.omit(ckfqabc), ~condition, summarize, m=mean(tr),
+          se=se(tr))
+
+dp$cond <- factor(dp$cond,                                    # Change ordering manually
+                  levels = c("Independent", "c2", "c3"))
+
+#create plot
+p6 <- ggplot(dp, aes(y=m, x=cond, fill=cond)) +
+  #mean 
+  stat_summary(fun = mean, geom = "bar", position = "dodge", color='black', width=0.5) + 
+  geom_point()+
+  #error bars
+  geom_errorbar(aes(ymin=m-se, ymax=m+se),color='black', width = .25, position=position_dodge((width=0.9))) +
+  #text, expression changes the Delta to a Greek letter
+  ylab("N")+
+  #xlab
+  xlab("Condition")+ 
+  #theme
+  theme_classic()+#
+  #color scheme
+  scale_fill_manual(values=(c("#F0F8FA", "#83C5BE","#00707A")))+
+  #theme
+  theme(text = element_text(size=21,  family="sans"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="none")+
+  #no legend
+  guides(color="none", shape="none")+
+  #scale y
+  geom_hline(yintercept=0)+
+  #scale y
+  scale_y_continuous(expand = c(0,0),
+                     limits = c(0,70)) +
+  ggtitle("N Chunk ABC")+
+  coord_fixed(0.05)
+#show!
+p6
+```
+```{r}
+ckfqabc$condition <- factor(ckfqabc$condition,                                    # Change ordering manually
+                  levels = c("Independent", "c2", "c3"))
+#null model doesn't contain condition, but fixed and random intercept
+mnull<-lm(tr~1 , data=ckfqabc)
+#alternative model contains condition is fixed effect
+ma<-lm(tr~condition, data=ckfqabc)
+#is the alternative model significantly better than the null model
+anova(mnull, ma)#yes!
+
+```
+```{r}
+ckfqabc$condition <- factor(ckfqabc$condition,                                    # Change ordering manually
+                  levels = c("c2", "Independent", "c3"))
+ma<-lm(tr~condition, data=ckfqabc)
+#is the alternative model significantly better than the null model
+summary(ma)
+
+```
+
+
+# Wasserstein Distance Calculation
+```{r}
+#select neutral blocks
+dat<-read.csv('/kyb/rg/swu/Nextcloud/Documents/chunking/data/data_plos_exp12/filtered_exp1.csv')
+
+library(stringi)
+library(stringr)
+library(lsr)
+
+#remove braces
+dat$keyassignment<-str_replace(dat$keyassignment, '\\[', '')
+dat$keyassignment<-str_replace(dat$keyassignment, '\\]', '')
+#only look at neutral blocks
+dd<-dat[dat$block %in% c(1,2,9,10),]
+#extract A,B,C,D
+dd$a<-substr(dd$keyassignment, 2, 2)
+dd$b<-substr(dd$keyassignment, 7, 7)
+dd$c<-substr(dd$keyassignment, 12, 12)
+dd$d<-substr(dd$keyassignment, 17, 17)
+#blocks
+dd$block<-rep(rep(c("first", "last"), each=200), length(unique(dat$id)))
+#collection frames
+dc1<-dc2<-dc3<-dc4<-dc5<-data.frame(id=numeric(), cond=numeric(), rt1=numeric(), rt2=numeric(), block=numeric())
+#loop through
+for (i in 1:length(unique(dd$id))){
+  ddk<-subset(dd, id==unique(dd$id)[i])
+  #loop through first and last
+  for (nb in c("first", "last")){
+    #select
+    ddn<-subset(ddk, block==nb)
+    #get a,b,c
+    a<-ddn$a[1]
+    b<-ddn$b[1]
+    c<-ddn$c[1]
+    d<-ddn$d[1]
+    for (n in 3:nrow(ddn)){
+      #get all chunks of size 3
+      if (paste(ddn$instructioncollect[n-2])==a & paste(ddn$instructioncollect[n-1])==b & paste(ddn$instructioncollect[n])==c){
+        dc1<-rbind(dc1, data.frame(id=ddn$id[n], cond=ddn$condition[n], rt1=ddn$timecollect[n-1], rt2=ddn$timecollect[n], block=ddn$block[n]))
+      }
+      if (!(paste(ddn$instructioncollect[n-2])==a & paste(ddn$instructioncollect[n-1])==b & paste(ddn$instructioncollect[n])==c)){
+        dc5<-rbind(dc5, data.frame(id=ddn$id[n], cond=ddn$condition[n], rt1=ddn$timecollect[n-1], rt2=ddn$timecollect[n], block=ddn$block[n]))
+      }
+    }
+  }
+}
+
+dc1$cond[dc1$cond ==0]<-'Independent'
+dc1$cond[dc1$cond ==1]<-'c3'
+dc1$cond[dc1$cond ==2]<-'c2'
+
+dc5$cond[dc5$cond ==0]<-'Independent'
+dc5$cond[dc5$cond ==1]<-'c3'
+dc5$cond[dc5$cond ==2]<-'c2'
+
+#library for Wasserstein
+library(transport)
+wasserst<-function(x,y){
+  #at least 5 long
+  if (length(x)>=5){dist<-wasserstein1d(x, y)}
+  else {dist<-NA}#otherwise NA
+  return(dist)}
+
+#get the Wasserstein distances, again removing RTs<1000ms
+m1<-ddply(subset(dc1,rt1 <=1000 & rt2<=1000), ~id+cond, summarize, diff=wasserst(rt1[block=="first"], rt2[block=="first"])-wasserst(rt1[block=="last"], rt2[block=="last"]))
+m5<-ddply(subset(dc5,rt1 <=1000 & rt2<=1000), ~id+cond, summarize, diff=wasserst(rt1[block=="first"], rt2[block=="first"])-wasserst(rt1[block=="last"], rt2[block=="last"]))
+
+m<-m1
+#get the change per condition and id
+dp<-ddply(m, ~cond+id, summarize, m=mean(diff, na.rm=TRUE))
+#control for no chunks
+```
+
+
+```{r}
+
+dp$m<-dp$m-m5$diff
+m$cond <- factor(m$cond,                                    # Change ordering manually
+                  levels = c("Independent", "c2", "c3"))
+#no effect
+m1<-lm(diff~1, data=na.omit(m))
+#effof condition
+m2<-lm(diff~cond, data=na.omit(m))
+#which one is better?
+anova(m1, m2)
+```
+```{r}
+
+m$cond <- factor(m$cond,                                    # Change ordering manually
+                  levels = c("c3", "Independent", "c2"))
+m2<-lm(diff~cond, data=na.omit(m))
+#which one is better?
+summary(m2)
+```
+
+```{r}
+#pextract means
+se<-function(x){sd(x)/sqrt(length(x))}
+
+dm<-ddply(dp, ~cond, summarize, m=mean(na.omit(m)), se=se(na.omit(m)))
+dm$se[1]<-se(na.omit(subset(dp, cond=='c2')$m))
+dm$se[2]<-se(na.omit(subset(dp, cond=='c3')$m))
+dm$se[3]<-se(na.omit(subset(dp, cond=='Independent')$m))
+
+dm$cond <- factor(dm$cond,                                    # Change ordering manually
+                  levels = c("Independent", "c2", "c3"))
+
+#plot
+p7 <- ggplot(dm, aes(y=m, x=cond, fill=cond)) +
+  #mean
+  stat_summary(fun = mean, geom = "bar", position = "dodge", color='black', width=0.5) + 
+  #points
+  geom_point()+
+  #error bars
+  geom_errorbar(aes(ymin=m-se, ymax=m+se),color='black', width = .25, position=position_dodge((width=0.9))) +
+  #ylab
+  ylab(expression(Delta~"Wasserstein"))+
+  #xlab
+  xlab("Condition")+ 
+  #theme
+  theme_classic()+
+  #scale fill
+  scale_fill_manual(values=(c("#F0F8FA", "#83C5BE","#00707A")))+
+  #theme change
+  theme(text = element_text(size=21,  family="sans"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="none")+
+  #no legend
+  guides(color="none", shape="none")+
+  #line at 0
+  geom_hline(yintercept=0)+
+  #scale y
+  #title
+  ggtitle("Chunkiness")+
+  coord_fixed(0.07)
+#show
+p7
+```
+
+
+```{r}
+ckfq<-read.csv('/kyb/rg/swu/Nextcloud/Documents/chunking/data/data_plos_exp12/exp1dckfq.csv')
+
+ckfq$condition<-ifelse(ckfq$condition==0, "Independent", ckfq$condition)
+ckfq$condition<-ifelse(ckfq$condition==1, "c3", ckfq$condition)
+ckfq$condition<-ifelse(ckfq$condition==2, "c2", ckfq$condition)
+
+ckfq$chunk<-ifelse(ckfq$chunk==123, "abc", ckfq$chunk)
+ckfq$chunk<-ifelse(ckfq$chunk==12, "ab", ckfq$chunk)
+ckfqabc<-subset(ckfq, chunk=="abc")
+
+#for true delta, we need to subtract control
+
+se<-function(x){sd(x)/sqrt(length(x))}
+
+dp<-ddply(na.omit(ckfqabc), ~condition, summarize, m=mean(delta_c),
+          se=se(delta_c))
+
+dp$cond <- factor(dp$cond,                                    # Change ordering manually
+                  levels = c("Independent", "c2", "c3"))
+
+#create plot
+p6 <- ggplot(dp, aes(y=m, x=cond, fill=cond)) +
+  #mean 
+  stat_summary(fun = mean, geom = "bar", position = "dodge", color='black', width=0.5) + 
+  geom_point()+
+  #error bars
+  geom_errorbar(aes(ymin=m-se, ymax=m+se),color='black', width = .25, position=position_dodge((width=0.9))) +
+  #text, expression changes the Delta to a Greek letter
+  ylab(expression(Delta~"N"))+
+  #xlab
+  xlab("Condition")+ 
+  #theme
+  theme_classic()+#
+  #color scheme
+  scale_fill_manual(values=(c("#F0F8FA", "#83C5BE","#00707A")))+
+  #theme
+  theme(text = element_text(size=21,  family="sans"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="none")+
+  #no legend
+  guides(color="none", shape="none")+
+  #scale y
+  #scale y
+  geom_hline(yintercept=0)+
+  #scale y
+  scale_y_continuous(expand = c(0,0),
+                     limits = c(0,10)) +
+  #title
+  ggtitle("Chunk Increase ABC") +
+  coord_fixed(0.3)
+#show!
+p6
+```
+```{r}
+ckfqabc$condition <- factor(ckfqabc$condition,                                    # Change ordering manually
+                  levels = c("Independent", "c2", "c3"))
+#fit without condition
+m1<-lm(delta_c~1, data=ckfqabc)
+#with condition
+m2<-lm(delta_c~condition, data=na.omit(ckfqabc))
+#which one is better?
+anova(m1,m2)
+# Plot Chunk Frequency
+```
+```{r}
+ckfqabc$condition <- factor(ckfqabc$condition,                                    # Change ordering manually
+                  levels = c("c2", "Independent", "c3"))
+m2<-lm(delta_c~condition, data=na.omit(ckfqabc))
+summary(m2)
+```
+
+
+```{r}
+ckfq<-read.csv('/kyb/rg/swu/Nextcloud/Documents/chunking/data/data_plos_exp12/exp1dckfq.csv')
+
+ckfq$condition<-ifelse(ckfq$condition==0, "Independent", ckfq$condition)
+ckfq$condition<-ifelse(ckfq$condition==1, "c3", ckfq$condition)
+ckfq$condition<-ifelse(ckfq$condition==2, "c2", ckfq$condition)
+
+ckfq$chunk<-ifelse(ckfq$chunk==123, "abc", ckfq$chunk)
+ckfq$chunk<-ifelse(ckfq$chunk==12, "ab", ckfq$chunk)
+ckfqabc<-subset(ckfq, chunk=="ab")
+
+#for true delta, we need to subtract control
+
+se<-function(x){sd(x)/sqrt(length(x))}
+
+dp<-ddply(na.omit(ckfqabc), ~condition, summarize, m=mean(delta_c),
+          se=se(delta_c))
+
+dp$cond <- factor(dp$cond,                                    # Change ordering manually
+                  levels = c("Independent", "c2", "c3"))
+
+#create plot
+p6 <- ggplot(dp, aes(y=m, x=cond, fill=cond)) +
+  #mean 
+  stat_summary(fun = mean, geom = "bar", position = "dodge", color='black', width=0.5) + 
+  geom_point()+
+  #error bars
+  geom_errorbar(aes(ymin=m-se, ymax=m+se),color='black', width = .25, position=position_dodge((width=0.9))) +
+  #text, expression changes the Delta to a Greek letter
+  ylab(expression(Delta~"N"))+
+  #xlab
+  xlab("Condition")+ 
+  #theme
+  theme_classic()+#
+  #color scheme
+  scale_fill_manual(values=(c("#F0F8FA", "#83C5BE","#00707A")))+
+  #theme
+  theme(text = element_text(size=21,  family="sans"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="none")+
+  #no legend
+  guides(color="none", shape="none")+
+  #scale y
+  geom_hline(yintercept=0)+
+  #scale y
+  scale_y_continuous(expand = c(0,0),
+                     limits = c(-1,11)) +
+  #title
+  ggtitle("Chunk Increase AB") +
+  coord_fixed(0.3)
+#show!
+p6
+```
+```{r}
+ckfqab$condition <- factor(ckfqab$condition,                                    # Change ordering manually
+                  levels = c("Independent", "c2", "c3"))
+#fit without condition
+m1<-lm(delta_c~1, data=ckfqab)
+#with condition
+m2<-lm(delta_c~condition, data=na.omit(ckfqab))
+#which one is better?
+anova(m1,m2)
+# Plot Chunk Frequency
+```
+
+```{r}
+ckru<-read.csv('/kyb/rg/swu/Nextcloud/Documents/chunking/data/data_plos_exp12/chunkreusep.csv')
+ckru<-subset(ckru, condition %in% c('c2', 'c3', 'Independent'))
+
+#for true delta, we need to subtract control
+
+se<-function(x){sd(x)/sqrt(length(x))}
+
+dp<-ddply(na.omit(ckru), ~condition, summarize, m=mean(reuse_p),
+          se=se(reuse_p))
+
+dp$condition <- factor(dp$condition,                                    # Change ordering manually
+                  levels = c("Independent", "c2", "c3"))
+
+#create plot
+p10 <- ggplot(dp, aes(y=m, x=condition, fill=condition)) +
+  #mean 
+  stat_summary(fun = mean, geom = "bar", position = "dodge", color='black', width=0.5) + 
+  geom_point()+
+  #error bars
+  geom_errorbar(aes(ymin=m-se, ymax=m+se),color='black', width = .25, position=position_dodge((width=0.9))) +
+  #text, expression changes the Delta to a Greek letter
+  ylab("P")+
+  #xlab
+  xlab("Condition")+ 
+  #theme
+  theme_classic()+#
+  #color scheme
+  scale_fill_manual(values=(c("#F0F8FA", "#83C5BE","#00707A")))+
+  #theme
+  theme(text = element_text(size=21,  family="sans"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="none")+
+  #no legend
+  guides(color="none", shape="none")+
+  #scale y
+  geom_hline(yintercept=0)+
+  #scale y
+  scale_y_continuous(expand = c(0,0),
+                     limits = c(0,1)) +
+  ggtitle("Chunk Reuse Probability")+
+  coord_fixed(3)
+#show!
+p10
+```
+```{r}
+ckru$condition <- factor(ckru$condition,                                    # Change ordering manually
+                  levels = c("Independent", "c2", "c3"))
+#fit without condition
+m1<-lm(reuse_p~1, data=ckru)
+#with condition
+m2<-lm(reuse_p~condition, data=na.omit(ckru))
+#which one is better?
+anova(m1,m2)
+# Plot Chunk Frequency
+```
+```{r}
+ckru$condition <- factor(ckru$condition,                                    # Change ordering manually
+                  levels = c("c2", "Independent", "c3"))
+m2<-lm(reuse_p~condition, data=na.omit(ckru))
+#which one is better?
+summary(m2)
+# Plot Chunk Frequency
+```
+
+```{r}
+library(stringi)
+library(stringr)
+library(lsr)
+dat<-read.csv('/kyb/rg/swu/Nextcloud/Documents/chunking/data/data_plos_exp12/filtered_exp1.csv')
+#remove braces
+dat$keyassignment<-str_replace(dat$keyassignment, '\\[', '')
+dat$keyassignment<-str_replace(dat$keyassignment, '\\]', '')
+#only look at neutral blocks
+dd<-dat[dat$block %in% c(1,2,9,10),]
+
+dd$condition<-ifelse(dd$condition==0, "indep", dd$condition)
+dd$condition<-ifelse(dd$condition==1, "c3", dd$condition)
+dd$condition<-ifelse(dd$condition==2, "c2", dd$condition)
+
+
+#get A, B, C, and D
+
+a<-substr(dd$keyassignment, 2, 2)
+b<-substr(dd$keyassignment, 7, 7)
+c<-substr(dd$keyassignment, 12, 12)
+d<-substr(dd$keyassignment, 17, 17)
+
+#we only look at the neutral blocks, i.e. the first two and the last two
+dd$block<-rep(rep(c("first", "last"), each=200), length(unique(dd$id)))
+#remove braces
+
+#current instruction
+dd$current<-dd$instructioncollect
+
+#last instruction
+dd$last<-c(1, paste(dd$instructioncollect[-nrow(dd)]))
+
+dd$true<-ifelse(paste(dd$last)==a & paste(dd$current)==b, 0.9, 0)
+dd$true<-ifelse(paste(dd$last)==b & paste(dd$current)==c, 0.7, dd$true)
+dd$true<-ifelse(paste(dd$last)==c & paste(dd$current)==d, 0.9, dd$true)
+dd$true<-ifelse(paste(dd$last)==d & paste(dd$current)==a, 0.7, dd$true)
+dd$true<-ifelse(paste(dd$last)==a & paste(dd$current)==a| paste(dd$last)==a & paste(dd$current)==c|paste(dd$last)==a & paste(dd$current)==d,0.1/3 , dd$true)
+dd$true<-ifelse(paste(dd$last)==b & paste(dd$current)==a| paste(dd$last)==b & paste(dd$current)==b|paste(dd$last)==b & paste(dd$current)==d,0.1 , dd$true)
+dd$true<-ifelse(paste(dd$last)==c & paste(dd$current)==a| paste(dd$last)==c & paste(dd$current)==b|paste(dd$last)==c & paste(dd$current)==c,0.1/3 , dd$true)
+dd$true<-ifelse(paste(dd$last)==d & paste(dd$current)==d| paste(dd$last)==a & paste(dd$current)==c|paste(dd$last)==a & paste(dd$current)==d,0.1 , dd$true)
+
+
+dd$chunk3<-ifelse(paste(dd$last)==a & paste(dd$current)==b, 1, 0)
+dd$chunk3<-ifelse(paste(dd$last)==b & paste(dd$current)==c, 1, dd$chunk3)
+dd$chunk3<-ifelse(paste(dd$last)==c & paste(dd$current)==d, 0.9, dd$chunk3)
+dd$chunk3<-ifelse(paste(dd$last)==c & paste(dd$current)==a| paste(dd$last)==c & paste(dd$current)==b|paste(dd$last)==c & paste(dd$current)==c,0.1/3 , dd$chunk3)
+dd$chunk3<-ifelse(paste(dd$last)==d & paste(dd$current)==a, 0.7, dd$chunk3)
+dd$chunk3<-ifelse(paste(dd$last)==d & paste(dd$current)==b|paste(dd$last)==d & paste(dd$current)==c|paste(dd$last)==d & paste(dd$current)==d, 0.1, dd$chunk3)
+
+dd$chunk2<-ifelse(paste(dd$last)==a & paste(dd$current)==b, 1, 0)
+dd$chunk2<-ifelse(paste(dd$last)==b & paste(dd$current)==c, 0.7, dd$chunk2)
+dd$chunk2<-ifelse(paste(dd$last)==b & paste(dd$current)==a|paste(dd$last)==b & paste(dd$current)==b|paste(dd$last)==b & paste(dd$current)==c ,0.1,dd$chunk2)
+dd$chunk2<-ifelse(paste(dd$last)==c & paste(dd$current)==d, 0.9, dd$chunk2)
+dd$chunk2<-ifelse(paste(dd$last)==c & paste(dd$current)==a| paste(dd$last)==c & paste(dd$current)==b|paste(dd$last)==c & paste(dd$current)==c,0.1/3 , dd$chunk2)
+dd$chunk2<-ifelse(paste(dd$last)==d & paste(dd$current)==a, 0.7, dd$chunk2)
+dd$chunk2<-ifelse(paste(dd$last)==d & paste(dd$current)==b|paste(dd$last)==d & paste(dd$current)==c|paste(dd$last)==d & paste(dd$current)==d, 0.1, dd$chunk2)
+
+dd<-subset(dd, block=="last")# only look at the last block
+
+dd$id<-as.factor(dd$id)
+
+
+dd$chunk3<-as.numeric(scale(dd$chunk3))
+dd$chunk2<-as.numeric(scale(dd$chunk2))
+dd$true<-as.numeric(scale(dd$true))
+
+
+#full model
+dd$condition<-as.factor(dd$condition)
+dd$condition<-relevel(dd$condition,ref="indep")
+m1<-lmer(log(timecollect)~condition*chunk2+condition*true+condition*chunk3+ (1|id), data=subset(dd, timecollect<=1000 & correctcollect==1))
+#lesioned model
+m2<-lmer(log(timecollect)~chunk2+true+chunk3+(1|id), data=subset(dd, timecollect<=1000 & correctcollect==1))
+
+m3<-lmer(log(timecollect)~chunk2+true+chunk3+condition + (1|id), data=subset(dd, timecollect<=1000 & correctcollect==1))
+
+#which one better?
+anova(m1,m2)#m1
+anova(m1,m3)#m1
+```
+
+```{r}
+summary(m1)
+```
+
+```{r}
+sm1<-summary(m1)
+#extract coefficients
+m<-c(sm1$coefficients[7,1], sm1$coefficients[8,1], sm1$coefficients[9,1], sm1$coefficients[10,1], sm1$coefficients[11,1], sm1$coefficients[12,1]) 
+se<-c(sm1$coefficients[7,2], sm1$coefficients[8,2], sm1$coefficients[9,2], sm1$coefficients[10,2], sm1$coefficients[11,2], sm1$coefficients[12,2]) 
+
+#data frame
+dp<-data.frame(m, se, effect=c('c2:C2', 'c3:C2', 'c2:TR','c3:TR','c2:C3','c3:C3'))
+#effect
+dp$effect<-factor(dp$effect, levels=c('c2:C2', 'c3:C2', 'c2:TR','c3:TR','c2:C3','c3:C3'))
+```
+
+```{r}
+
+#show plot
+p6 <- ggplot(dp, aes(y=m, x=effect, fill=effect)) +
+  #show mean
+  stat_summary(fun = mean, geom = "bar", position = "dodge", color='black', width=0.5) + 
+  #point
+  geom_point()+
+  #error bar
+  geom_errorbar(aes(ymin=m-se, ymax=m+se),color='black', width = .25, position=position_dodge((width=0.9))) +
+  #labs
+  ylab(expression(beta))+
+  xlab("Effect")+ 
+  #classic theme
+  theme_classic()+
+  #fills
+  scale_fill_manual(values=(c("#808080", "#808080","#808080","#808080","#808080","#808080")))+
+  #theme change
+  theme(text = element_text(size=21,  family="sans"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="none")+
+  #no legend
+  guides(color=FALSE, shape=FALSE)+
+  #line at 0
+  geom_hline(yintercept=0)+
+  #scale y
+  #scale_y_continuous(expand = c(0,0),
+  #                   limits = c(-0.042,0.04)) +
+  #title
+  ggtitle("Chunky RTs")
+#show!
+p6
+```
+```{r}
+dd$chunkresp<-ifelse(paste(dd$last)==a & paste(dd$userpress)==b, 1, 0)
+dd$chunkresp<-ifelse(paste(dd$last)==b & paste(dd$userpress)==c, 1, dd$chunkresp)
+dd$chunkresp<-ifelse(paste(dd$last)==c & paste(dd$userpress)==d, 1, dd$chunkresp)
+dd$chunkresp<-ifelse(paste(dd$last)==d & paste(dd$userpress)==a, 1, dd$chunkresp)
+dd$incorrect<-ifelse(dd$correctcollect==1, 0, 1)
+dd$condition<-as.factor(dd$condition)
+
+m1<-glmer(chunkresp~condition*correctcollect+(1|id), data=dd, family="binomial")
+```
+
+```{r}
+m2<-glmer(chunkresp~correctcollect+(1|id), data=dd, family="binomial")
+anova(m1,m2)
+```
