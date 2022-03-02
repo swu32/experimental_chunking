@@ -1,7 +1,10 @@
 ---
-title: "R Notebook to study Eric's Analysis Code"
-output: html_notebook
+title: "Experiment 2 Analysis"
+author: "Shuchen Wu"
+date: "01/03/2022"
+output: html_document
 ---
+
 ```{r}
 #plyr can be used to manipulate data frames
 library(plyr)
@@ -13,12 +16,8 @@ library(lmerTest)
 library(stringi)
 library(stringr)
 library(lsr)
-dat<-read.csv('/kyb/rg/swu/Nextcloud/Documents/chunking/data/data_plos_exp12/cleanedex2.csv')
-
-
+dat<-read.csv('../data_plos_exp12/cleanedex2.csv')
 ```
-
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
 
 ```{r}
 #full data set without high RTs excluded
@@ -50,7 +49,6 @@ anova(mnull, malternative)#yes!
 
 ```{r}
 summary(mnull)
-
 ```
 ```{r}
 summary(malternative)
@@ -296,92 +294,7 @@ p3 <- ggplot(dp, aes(y=m, x=cond, fill=cond)) +
 p3
 
 ```
-```{r}
-ddabrt<-subset(dd, chunkab==1 & timecollect<=tselect)
-ddabrtsum <- data_summary(ddabrt, varname="timecollect", groupnames=c("condition", "block"))
-ddabrtsum$ck <- rep("ab",times=4)
-ddnabrt<-subset(dd, controlab==1 & timecollect<=tselect)
-ddnabrtsum <- data_summary(ddnabrt, varname="timecollect", groupnames=c("condition", "block"))
-ddnabrtsum$ck <- rep("nab",times=4)
 
-ddabckrtsum<-rbind(ddabrtsum,ddnabrtsum)
-library(ggplot2)
-#library(hrbrthemes)
- 
-# Graph
-ggplot(ddabckrtsum, aes(fill=block, y=timecollect, x=condition)) + 
-    geom_bar(position="dodge", color="black", stat="identity") +
-    geom_errorbar(aes(ymin=timecollect-sd, ymax=timecollect+sd), width=.2,
-                 position=position_dodge(.9)) +
-    ggtitle("ab and control") +
-    facet_wrap(~ck) +
-     theme_classic() +
-   scale_fill_manual(labels = c("Baseline", "Test"),values=c('#999999','#E69F00'))+
-    xlab("Condition") + ylab("Reaction Time")
-```
-```{r}
-ddbcrt<-subset(dd, chunkbc==1 & timecollect<=tselect)
-ddbcrtsum <- data_summary(ddbcrt, varname="timecollect", groupnames=c("condition", "block"))
-ddbcrtsum$ck <- rep("bc",times=4)
-ddnbcrt<-subset(dd, controlbc==1 & timecollect<=tselect)
-ddnbcrtsum <- data_summary(ddnbcrt, varname="timecollect", groupnames=c("condition", "block"))
-ddnbcrtsum$ck <- rep("nbc",times=4)
-ddbcckrtsum<-rbind(ddbcrtsum,ddnbcrtsum) # combine the two dataframe into one
-
-
-# Graph
-ggplot(ddbcckrtsum, aes(fill=block, y=timecollect, x=condition)) + 
-    geom_bar(position="dodge", color="black", stat="identity") +
-    geom_errorbar(aes(ymin=timecollect-sd, ymax=timecollect+sd), width=.2,
-                 position=position_dodge(.9)) +
-    ggtitle("bc and control") +
-    facet_wrap(~ck) +
-     theme_classic() +
-   scale_fill_manual(labels = c("Baseline", "Test"),values=c('#999999','#E69F00'))+
-    xlab("Condition") + ylab("Reaction Time")
-```
-```{r}
-ddcdrt<-subset(dd, chunkcd==1 & timecollect<=tselect)
-ddcdrtsum <- data_summary(ddcdrt, varname="timecollect", groupnames=c("condition", "block"))
-ddcdrtsum$ck <- rep("cd",times=4)
-ddncdrt<-subset(dd, controlcd==1 & timecollect<=tselect)
-ddncdrtsum <- data_summary(ddncdrt, varname="timecollect", groupnames=c("condition", "block"))
-ddncdrtsum$ck <- rep("ncd",times=4)
-ddcdckrtsum<-rbind(ddcdrtsum,ddncdrtsum) # combine the two dataframe into one
-
-
-# Graph
-ggplot(ddcdckrtsum, aes(fill=block, y=timecollect, x=condition)) + 
-    geom_bar(position="dodge", color="black", stat="identity") +
-    geom_errorbar(aes(ymin=timecollect-sd, ymax=timecollect+sd), width=.2,
-                 position=position_dodge(.9)) +
-    ggtitle("cd and control") +
-    facet_wrap(~ck) +
-     theme_classic() +
-   scale_fill_manual(labels = c("Baseline", "Test"),values=c('#999999','#E69F00'))+
-    xlab("Condition") + ylab("Reaction Time")
-```
-```{r}
-dddart<-subset(dd, chunkda==1 & timecollect<=tselect)
-dddartsum <- data_summary(dddart, varname="timecollect", groupnames=c("condition", "block"))
-dddartsum$ck <- rep("da",times=4)
-ddndart<-subset(dd, controlda==1 & timecollect<=tselect)
-ddndartsum <- data_summary(ddndart, varname="timecollect", groupnames=c("condition", "block"))
-ddndartsum$ck <- rep("nda",times=4)
-dddackrtsum<-rbind(dddartsum,ddndartsum) # combine the two dataframe into one
-
-
-# Graph
-ggplot(dddackrtsum, aes(fill=block, y=timecollect, x=condition)) + 
-    geom_bar(position="dodge", color="black", stat="identity") +
-    geom_errorbar(aes(ymin=timecollect-sd, ymax=timecollect+sd), width=.2,
-                 position=position_dodge(.9)) +
-    ggtitle("da and control") +
-    facet_wrap(~ck) +
-     theme_classic() +
-   scale_fill_manual(labels = c("Baseline", "Test"),values=c('#999999','#E69F00'))+
-    xlab("Condition") + ylab("Reaction Time")
-```
 
 ```{r}
 #select neutral blocks
@@ -510,242 +423,11 @@ p4 <- ggplot(dm, aes(y=m, x=cond, fill=cond)) +
 p4
 ```
 
-```{r}
-#ckfq<-read.csv('/kyb/rg/swu/Nextcloud/Documents/chunking/data/data_plos_exp12/exp2dckfq.csv')
-ckfq<-read.csv('/kyb/rg/swu/Nextcloud/Documents/chunking/data/data_plos_exp12/exp2cleaneddckfq.csv')
-ckfq$condition<-ifelse(ckfq$condition=="fast", "Fast", ckfq$condition)
-ckfq$condition<-ifelse(ckfq$condition==1, "Accurate", ckfq$condition)
-
-ckfqhigh2<-subset(ckfq, chunk=="high2")
-
-#for true delta, we need to subtract control
-
-se<-function(x){sd(x)/sqrt(length(x))}
-
-dp<-ddply(na.omit(ckfqhigh2), ~condition, summarize, m=mean(delta_c),
-          se=se(delta_c))
-
-dp$condition<-ifelse(dp$condition==1, "Accurate", dp$condition)
 
 
-dp$condition <- factor(dp$condition,                                    # Change ordering manually
-                  levels = c("Accurate", "Fast"))
-
-#create plot
-p6 <- ggplot(dp, aes(y=m, x=condition, fill=condition)) +
-  #mean 
-  stat_summary(fun = mean, geom = "bar", position = "dodge", color='black', width=0.5) + 
-  geom_point()+
-  #error bars
-  geom_errorbar(aes(ymin=m-se, ymax=m+se),color='black', width = .25, position=position_dodge((width=0.9))) +
-  #text, expression changes the Delta to a Greek letter
-  ylab(expression(Delta~"N"))+
-  #xlab
-  xlab("Condition")+ 
-  #theme
-  theme_classic()+#
-  #color scheme
-  scale_fill_manual(values=(c("#5F4B8BFF", "#E69A8DFF")))+
-  #theme
-  theme(text = element_text(size=21,  family="sans"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="none")+
-  #no legend
-  guides(color="none", shape="none")+
-  #scale y
-  geom_hline(yintercept=0)+
-  #scale y
-  scale_y_continuous(expand = c(0,0),
-                     limits = c(0,25)) +
-            theme(text = element_text(size=24),
-            legend.text = element_text(size = 20))+ 
-  
-  ggtitle("High Transition") +
-  coord_fixed(0.1)
-
-#show!
-p6
-```
-```{r}
-ckfqhigh2$condition <- factor(ckfqhigh2$condition,                                    # Change ordering manually
-                  levels = c("Accurate", "Fast"))
-#fit without condition
-m1<-lm(delta_c~1, data=ckfqhigh2)
-m2<-lm(delta_c~condition, data=na.omit(ckfqhigh2))
-anova(m1,m2)
-```
 
 ```{r}
-ckfq<-read.csv('/kyb/rg/swu/Nextcloud/Documents/chunking/data/data_plos_exp12/exp2cleaneddckfq.csv')
-ckfq$condition<-ifelse(ckfq$condition=="fast", "Fast", ckfq$condition)
-ckfq$condition<-ifelse(ckfq$condition==1, "Accurate", ckfq$condition)
-
-ckfqmed2<-subset(ckfq, chunk=="medium2")
-
-#for true delta, we need to subtract control
-
-se<-function(x){sd(x)/sqrt(length(x))}
-
-dp<-ddply(na.omit(ckfqmed2), ~condition, summarize, m=mean(delta_c),
-          se=se(delta_c))
-dp$condition<-ifelse(dp$condition==1, "Accurate", dp$condition)
-
-
-dp$condition <- factor(dp$condition,                                    # Change ordering manually
-                  levels = c("Accurate", "Fast"))
-
-#create plot
-p7 <- ggplot(dp, aes(y=m, x=condition, fill=condition)) +
-  #mean 
-  stat_summary(fun = mean, geom = "bar", position = "dodge", color='black', width=0.5) + 
-  geom_point()+
-  #error bars
-  geom_errorbar(aes(ymin=m-se, ymax=m+se),color='black', width = .25, position=position_dodge((width=0.9))) +
-  #text, expression changes the Delta to a Greek letter
-  ylab(expression(Delta~"N"))+
-  #xlab
-  xlab("Condition")+ 
-  #theme
-  theme_classic()+#
-  #color scheme
-  scale_fill_manual(values=(c("#5F4B8BFF", "#E69A8DFF")))+
-  #theme
-  theme(text = element_text(size=21,  family="sans"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="none")+
-  #no legend
-  guides(color="none", shape="none")+
-  #scale y
-  geom_hline(yintercept=0)+
-  #scale y
-  scale_y_continuous(expand = c(0,0),
-                     limits = c(0,25)) +
-  ggtitle("Medium Transition") + 
-              theme(text = element_text(size=24),
-            legend.text = element_text(size = 20))+ 
-  coord_fixed(0.1)
-
-#show!
-p7
-```
-```{r}
-ckfqmed2$condition <- factor(ckfqmed2$condition,                                    # Change ordering manually
-                  levels = c("Accurate", "Fast"))
-#fit without condition
-m1<-lm(delta_c~1, data=ckfqmed2)
-m2<-lm(delta_c~condition, data=na.omit(ckfqmed2))
-anova(m1,m2)
-```
-
-```{r}
-ckfq<-read.csv('/kyb/rg/swu/Nextcloud/Documents/chunking/data/data_plos_exp12/exp2cleaneddckfq.csv')
-ckfq$condition<-ifelse(ckfq$condition=="fast", "Fast", "Accurate")
-#ckfq$condition<-ifelse(ckfq$condition=="accurate", "Accurate", ckfq$condition)
-
-ckfqsz3<-subset(ckfq, chunk=="sz3")
-
-#for true delta, we need to subtract control
-
-se<-function(x){sd(x)/sqrt(length(x))}
-
-dp<-ddply(na.omit(ckfqsz3), ~condition, summarize, m=mean(delta_c),
-          se=se(delta_c))
-dp$condition<-ifelse(dp$condition==1, "Accurate", dp$condition)
-
-
-dp$condition <- factor(dp$condition,                                    # Change ordering manually
-                  levels = c("Accurate", "Fast"))
-
-#create plot
-p8 <- ggplot(dp, aes(y=m, x=condition, fill=condition)) +
-  #mean 
-  stat_summary(fun = mean, geom = "bar", position = "dodge", color='black', width=0.5) + 
-  geom_point()+
-  #error bars
-  geom_errorbar(aes(ymin=m-se, ymax=m+se),color='black', width = .25, position=position_dodge((width=0.9))) +
-  #text, expression changes the Delta to a Greek letter
-  ylab(expression(Delta~"N"))+
-  #xlab
-  xlab("Condition")+ 
-  #theme
-  theme_classic()+#
-  #color scheme
-  scale_fill_manual(values=(c("#5F4B8BFF", "#E69A8DFF")))+
-  #theme
-  theme(text = element_text(size=21,  family="sans"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="none")+
-  #no legend
-  guides(color="none", shape="none")+
-  #scale y
-  geom_hline(yintercept=0)+
-  #scale y
-  scale_y_continuous(expand = c(0,0),
-                     limits = c(0,40)) +
-  ggtitle("Size 3 Chunks") +
-                theme(text = element_text(size=24),
-            legend.text = element_text(size = 20))+ 
-  
-  coord_fixed(0.08)
-#show!
-p8
-```
-
-```{r}
-ckfqsz3$condition <- factor(ckfqsz3$condition)
-#fit without condition
-m1<-lm(delta_c~1, data=ckfqsz3)
-m2<-lm(delta_c~condition, data=na.omit(ckfqsz3))
-anova(m1,m2)
-```
-```{r}
-ckfq<-read.csv('/kyb/rg/swu/Nextcloud/Documents/chunking/data/data_plos_exp12/exp2cleaneddckfq.csv')
-ckfq$condition<-ifelse(ckfq$condition=="fast", "Fast", ckfq$condition)
-ckfq$condition<-ifelse(ckfq$condition=="accurate", "Accurate", ckfq$condition)
-
-ckfqsz4<-subset(ckfq, chunk=="sz4")
-
-#for true delta, we need to subtract control
-
-se<-function(x){sd(x)/sqrt(length(x))}
-
-dp<-ddply(na.omit(ckfqsz4), ~condition, summarize, m=mean(delta_c),
-          se=se(delta_c))
-dp$condition<-ifelse(dp$condition==1, "Accurate", dp$condition)
-
-
-dp$condition <- factor(dp$condition,                                    # Change ordering manually
-                  levels = c("Accurate", "Fast"))
-
-#create plot
-p9 <- ggplot(dp, aes(y=m, x=condition, fill=condition)) +
-  #mean 
-  stat_summary(fun = mean, geom = "bar", position = "dodge", color='black', width=0.5) + 
-  geom_point()+
-  #error bars
-  geom_errorbar(aes(ymin=m-se, ymax=m+se),color='black', width = .25, position=position_dodge((width=0.9))) +
-  #text, expression changes the Delta to a Greek letter
-  ylab(expression(Delta~"N"))+
-  #xlab
-  xlab("Condition")+ 
-  #theme
-  theme_classic()+#
-  #color scheme
-  scale_fill_manual(values=(c("#5F4B8BFF", "#E69A8DFF")))+
-  #theme
-  theme(text = element_text(size=21,  family="sans"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="none")+
-  #no legend
-  guides(color="none", shape="none")+
-  #scale y
-  geom_hline(yintercept=0)+
-  #scale y
-  scale_y_continuous(expand = c(0,0),
-                     limits = c(0,28)) +
-                  theme(text = element_text(size=24),
-            legend.text = element_text(size = 20))+ 
-    coord_fixed(0.08)+
-
-  ggtitle("Size 4 Chunks")
-#show!
-p9
-```
-
-```{r}
-ckfq<-read.csv('/kyb/rg/swu/Nextcloud/Documents/chunking/data/data_plos_exp12/exp2cleaneddckfq.csv')
+ckfq<-read.csv('../data_plos_exp12/exp2cleaneddckfq.csv')
 ckfq$condition<-ifelse(ckfq$condition=="fast", "Fast", "Accurate")
 #ckfq$condition<-ifelse(ckfq$condition=="accurate", "Accurate", ckfq$condition)
 
@@ -807,7 +489,7 @@ anova(m1,m2)
 
 
 ```{r}
-ckru<-read.csv('/kyb/rg/swu/Nextcloud/Documents/chunking/data/data_plos_exp12/chunkreusep.csv')
+ckru<-read.csv('../data_plos_exp12/chunkreusep.csv')
 ckru<-subset(ckru, condition %in% c('Accurate', 'Fast'))
 
 #for true delta, we need to subtract control
@@ -869,7 +551,7 @@ library(stringi)
 library(stringr)
 library(lsr)
 #via trial and error, I saw in which position they are in in this string, we assume A-B-C-D-A has transitions High-Medium-High-Medium
-dat<-read.csv('/kyb/rg/swu/Nextcloud/Documents/chunking/data/data_plos_exp12/cleanedex2.csv')
+dat<-read.csv('../data_plos_exp12/cleanedex2.csv')
 
 dat$keyassignment<-str_replace(dat$keyassignment, '\\[', '')
 dat$keyassignment<-str_replace(dat$keyassignment, '\\]', '')
@@ -968,7 +650,7 @@ p6 <- ggplot(dp, aes(y=m, x=effect, fill=effect)) +
 #show!
 p6
 ```
-fast is coded as a 1, and accyrate as a 0, 
+fast is coded as a 1, and accurate as a 0, 
 
 condition fast has a positive interaction effect with truth to the reaction time. 
 condition fast as a negative interaction effect with chunky to the reaction time. 
@@ -979,68 +661,4 @@ As the condition goes from accurate to fast, reaction time descreases more with 
 
 Compared to the chunky transition, the truth condition have a more positive interaction with the fast conditgion on influencing the reaction time.
 The chunky transition, compared to the truth condition, have a negative interaction with the fast condition on influencing the reaction time, 
-
-```{r}
-#we only look at the neutral blocks, i.e. the first two and the last two
-dat<-read.csv('/kyb/rg/swu/Nextcloud/Documents/chunking/data/data_plos_exp12/cleanedex2.csv')
-
-dd<-subset(dat, trialinstruction=="n")
-
-dd$block<-rep(rep(c("first", "last"), each=200), length(unique(dd$id)))
-
-dd<-subset(dd, block=="last")
-
-#via trial and error, I saw in which position they are in in this string, we assume A-B-C-D-A has transitions High-Medium-High-Medium
-a<-substr(dd$keyassignment, 2, 2)
-b<-substr(dd$keyassignment, 7, 7)
-c<-substr(dd$keyassignment, 12, 12)
-d<-substr(dd$keyassignment, 17, 17)
-
-dd$truth<-ifelse(paste(dd$last)==a & paste(dd$current)==b, 0.8, 0)
-dd$truth<-ifelse(paste(dd$last)==b & paste(dd$current)==c, 0.4, dd$truth)
-dd$truth<-ifelse(paste(dd$last)==c & paste(dd$current)==d, 0.8, dd$truth)
-dd$truth<-ifelse(paste(dd$last)==d & paste(dd$current)==a, 0.4, dd$truth)
-
-dd$chunky<-ifelse(paste(dd$last)==a & paste(dd$current)==b, 1, 0)
-dd$chunky<-ifelse(paste(dd$last)==b & paste(dd$current)==c, 1, dd$chunky)
-dd$chunky<-ifelse(paste(dd$last)==c & paste(dd$current)==d, 1, dd$chunky)
-dd$chunky<-ifelse(paste(dd$last)==d & paste(dd$current)==a, 1, dd$chunky)
-
-
-dd$id<-as.factor(dd$id)
-dd$condition<-ifelse(dd$condition==1, "accurate", "fast")
-dd$chunky<-as.numeric(scale(dd$chunky))
-dd$truth<-as.numeric(scale(dd$truth))
-head(dd)
-```
-```{r}
-dd$chunkresp<-ifelse(paste(dd$last)==a & paste(dd$userpress)==b, 1, 0)
-dd$chunkresp<-ifelse(paste(dd$last)==b & paste(dd$userpress)==c, 1, dd$chunkresp)
-dd$chunkresp<-ifelse(paste(dd$last)==c & paste(dd$userpress)==d, 1, dd$chunkresp)
-dd$chunkresp<-ifelse(paste(dd$last)==d & paste(dd$userpress)==a, 1, dd$chunkresp)
-dd$incorrect<-ifelse(dd$correctcollect==1, 0, 1)
-
-m1<-glmer(chunkresp~condition*correctcollect+(1|id), data=dd, family="binomial")
-```
-
-```{r}
-m2<-glmer(chunkresp~correctcollect+(1|id), data=dd, family="binomial")
-anova(m1,m2)
-```
-
-```{r}
-sm1<-summary(m1)
-m<-c(sm1$coefficients[2,1], sm1$coefficients[4,1]) 
-se<-c(sm1$coefficients[2,2], sm1$coefficients[4,2])
-dp<-data.frame(m, se, effect=c('Fast', 'Accurate'))
-p5 <- ggplot(dp, aes(y=m, x=effect, fill=effect)) +
-  scale_fill_manual(values=(c("#5F4B8BFF", "#E69A8DFF")))+
-  theme(text = element_text(size=21,  family="sans"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="none")+
-  guides(color=FALSE, shape=FALSE)+
-  geom_hline(yintercept=0)+
-  scale_y_continuous(expand = c(0,0),
-                     limits = c(-0.52,0.6)) +
-  ggtitle("e: Chunky responses")
-p5
-```
 
