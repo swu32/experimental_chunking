@@ -16,8 +16,7 @@ library(lmerTest)
 library(stringi)
 library(stringr)
 library(lsr)
-#dat<-read.csv('/kyb/rg/swu/Nextcloud/Documents/chunking/data/data/ync/data_filtered.csv')
-dat<-read.csv('/kyb/rg/swu/Nextcloud/Documents/chunking/data/data_plos_exp12/filtered_exp1.csv')
+dat<-read.csv('../data_plos_exp12/filtered_exp1.csv')
 
 ```
 
@@ -33,28 +32,6 @@ dl<-subset(dat, timecollect<=1000)
 1-nrow(dl)/nrow(dl1)
 ```
 
-
-```{r}
-ggplot(data  = dat,
-       aes(x = userpress,
-           y = timecollect,
-           col = correctcollect,))+
-    geom_point(size = 0.05,
-             alpha = .8,
-             position = "jitter")+# to add some random noise for plotting purposes
-    ylim(0,1500) + 
-    geom_smooth(method = lm,
-              se     = FALSE, 
-              col    = "black",
-              size   = .5, 
-              alpha  = .8)+ # to add regression line  
-    theme_minimal()+#make background white
-    theme(legend.position = "left")+# remove the location of the legend
-  scale_color_gradientn(colours = rainbow(2))+
-  labs(title = "instruction and reaction time",
-       subtitle = "with correctness using colors to denote")
-
-```
 
 ```{r}
 
@@ -143,143 +120,6 @@ dchunkdacontrol<-ddply(subset(dd, controlda==1 & timecollect<=tselect), ~id, sum
 
 
 ```
-
-```{r}
-data_summary <- function(data, varname, groupnames){
-  require(plyr)
-  summary_func <- function(x, col){
-    c(mean = mean(x[[col]], na.rm=TRUE),
-      sd = sd(x[[col]]/sqrt(length(x[[col]])), na.rm=TRUE))
-  }
-  data_sum<-ddply(data, groupnames, .fun=summary_func,
-                  varname)
-  data_sum <- rename(data_sum, c("mean" = varname))
- return(data_sum)
-}
-
-ddsum <- data_summary(dd, varname="timecollect", 
-                    groupnames=c("condition", "block","chunkab","controlab", "chunkbc", "controlbc", "chunkcd","controlcd", "chunkda", "controlda"))
-# Convert dose to a factor variable
-head(ddsum)
-
-```
-```{r}
-
-```
-
-Now try to plot them together on one plot
-```{r}
-ddabrt<-subset(dd, chunkab==1 & timecollect<=tselect)
-ddabrtsum <- data_summary(ddabrt, varname="timecollect", groupnames=c("condition", "block"))
-ddabrtsum$ck <- rep("ab",times=6)
-ddnabrt<-subset(dd, controlab==1 & timecollect<=tselect)
-ddnabrtsum <- data_summary(ddnabrt, varname="timecollect", groupnames=c("condition", "block"))
-ddnabrtsum$ck <- rep("nab",times=6)
-
-ddabckrtsum<-rbind(ddabrtsum,ddnabrtsum)
-library(ggplot2)
-#library(hrbrthemes)
- 
-# Graph
-ggplot(ddabckrtsum, aes(fill=block, y=timecollect, x=condition)) + 
-    geom_bar(position="dodge", color="black", stat="identity") +
-    geom_errorbar(aes(ymin=timecollect-sd, ymax=timecollect+sd), width=.2,
-                 position=position_dodge(.9)) +
-    ggtitle("ab and control") +
-    facet_wrap(~ck) +
-     theme_classic() +
-   scale_fill_manual(labels = c("Baseline", "Test"),values=c('#999999','#E69F00'))+
-    xlab("Condition") + ylab("Reaction Time")
-```
-```{r}
-ddbcrt<-subset(dd, chunkbc==1 & timecollect<=tselect)
-ddbcrtsum <- data_summary(ddbcrt, varname="timecollect", groupnames=c("condition", "block"))
-ddbcrtsum$ck <- rep("bc",times=6)
-ddnbcrt<-subset(dd, controlbc==1 & timecollect<=tselect)
-ddnbcrtsum <- data_summary(ddnbcrt, varname="timecollect", groupnames=c("condition", "block"))
-ddnbcrtsum$ck <- rep("nbc",times=6)
-ddbcckrtsum<-rbind(ddbcrtsum,ddnbcrtsum) # combine the two dataframe into one
-
-
-# Graph
-ggplot(ddbcckrtsum, aes(fill=block, y=timecollect, x=condition)) + 
-    geom_bar(position="dodge", color="black", stat="identity") +
-    geom_errorbar(aes(ymin=timecollect-sd, ymax=timecollect+sd), width=.2,
-                 position=position_dodge(.9)) +
-    ggtitle("bc and control") +
-    facet_wrap(~ck) +
-     theme_classic() +
-   scale_fill_manual(labels = c("Baseline", "Test"),values=c('#999999','#E69F00'))+
-    xlab("Condition") + ylab("Reaction Time")
-```
-```{r}
-ddcdrt<-subset(dd, chunkcd==1 & timecollect<=tselect)
-ddcdrtsum <- data_summary(ddcdrt, varname="timecollect", groupnames=c("condition", "block"))
-ddcdrtsum$ck <- rep("cd",times=6)
-ddncdrt<-subset(dd, controlcd==1 & timecollect<=tselect)
-ddncdrtsum <- data_summary(ddncdrt, varname="timecollect", groupnames=c("condition", "block"))
-ddncdrtsum$ck <- rep("ncd",times=6)
-ddcdckrtsum<-rbind(ddcdrtsum,ddncdrtsum) # combine the two dataframe into one
-
-
-# Graph
-ggplot(ddcdckrtsum, aes(fill=block, y=timecollect, x=condition)) + 
-    geom_bar(position="dodge", color="black", stat="identity") +
-    geom_errorbar(aes(ymin=timecollect-sd, ymax=timecollect+sd), width=.2,
-                 position=position_dodge(.9)) +
-    ggtitle("cd and control") +
-    facet_wrap(~ck) +
-     theme_classic() +
-   scale_fill_manual(labels = c("Baseline", "Test"),values=c('#999999','#E69F00'))+
-    xlab("Condition") + ylab("Reaction Time")
-```
-```{r}
-dddart<-subset(dd, chunkda==1 & timecollect<=tselect)
-dddartsum <- data_summary(dddart, varname="timecollect", groupnames=c("condition", "block"))
-dddartsum$ck <- rep("da",times=6)
-ddndart<-subset(dd, controlda==1 & timecollect<=tselect)
-ddndartsum <- data_summary(ddndart, varname="timecollect", groupnames=c("condition", "block"))
-ddndartsum$ck <- rep("nda",times=6)
-dddackrtsum<-rbind(dddartsum,ddndartsum) # combine the two dataframe into one
-
-
-# Graph
-ggplot(dddackrtsum, aes(fill=block, y=timecollect, x=condition)) + 
-    geom_bar(position="dodge", color="black", stat="identity") +
-    geom_errorbar(aes(ymin=timecollect-sd, ymax=timecollect+sd), width=.2,
-                 position=position_dodge(.9)) +
-    ggtitle("da and control") +
-    facet_wrap(~ck) +
-     theme_classic() +
-   scale_fill_manual(labels = c("Baseline", "Test"),values=c('#999999','#E69F00'))+
-    xlab("Condition") + ylab("Reaction Time")
-```
-
-
-```{r}
-# Default bar plot
-p<- ggplot(ddsum[which(ddsum$chunkab==1), ], aes(x=condition, y=timecollect, fill=block)) + 
-  geom_bar(stat="identity", color="black", 
-           position=position_dodge()) +
-  geom_errorbar(aes(ymin=timecollect-sd, ymax=timecollect+sd), width=.2,
-                 position=position_dodge(.9))
-# Finished bar plot
-p+labs(title="Reaction Time Change between Baseline and Test Blocks Responding to [a b]", x="Condition", y = "Reaction Time (ms)")+
-   theme_classic() +
-   scale_fill_manual(values=c('#999999','#E69F00'))
-
-# TODO: change the xlabel names 
-```
-want to combine rtab and rtnab into one dataframe. 
-```{r}
-#barplot(height=c(ddsum[which(ddsum$chunkab==1),],ddsum[which(ddsum$controlab==1),])$timecollect)
-```
-
-Plot the change of mean reaction time between the beasline and the test block
-```{r}
-
-```
-
 
 ```{r}
 tsrtab<-subset(dd, chunkab==1 & timecollect<=tselect & block=="last" )#$timecollect
@@ -377,12 +217,9 @@ summary(m2)
 ```
 
 ```{r}
-
-
 #summarize data by condition
 #summarize data for plotting
 #standard error function
-
 #for true delta, we need to subtract control
 
 data_delta<-data.frame(dchange=c(dchunkbc - dchunkbccontrol),cond=rep(cond, 1), set = rep(ddply(dat, ~id, summarize, cond=condition[201])$cond,1),id=rep(ddply(dat, ~id, summarize, cond=condition[201])$id, 1),
@@ -440,7 +277,7 @@ anova(m1,m2)
 
 
 ```{r}
-ckfq<-read.csv('/kyb/rg/swu/Nextcloud/Documents/chunking/data/data_plos_exp12/exp1dckfq.csv')
+ckfq<-read.csv('../data_plos_exp12/exp1dckfq.csv')
 
 ckfq$condition<-ifelse(ckfq$condition==0, "Independent", ckfq$condition)
 ckfq$condition<-ifelse(ckfq$condition==1, "c3", ckfq$condition)
@@ -504,7 +341,7 @@ anova(mnull, ma)#yes!
 ```
 
 ```{r}
-ckfq<-read.csv('/kyb/rg/swu/Nextcloud/Documents/chunking/data/data_plos_exp12/exp1dckfq.csv')
+ckfq<-read.csv('../data_plos_exp12/exp1dckfq.csv')
 
 ckfq$condition<-ifelse(ckfq$condition==0, "Independent", ckfq$condition)
 ckfq$condition<-ifelse(ckfq$condition==1, "c3", ckfq$condition)
@@ -578,7 +415,7 @@ summary(ma)
 # Wasserstein Distance Calculation
 ```{r}
 #select neutral blocks
-dat<-read.csv('/kyb/rg/swu/Nextcloud/Documents/chunking/data/data_plos_exp12/filtered_exp1.csv')
+dat<-read.csv('../data_plos_exp12/filtered_exp1.csv')
 
 library(stringi)
 library(stringr)
@@ -714,7 +551,7 @@ p7
 
 
 ```{r}
-ckfq<-read.csv('/kyb/rg/swu/Nextcloud/Documents/chunking/data/data_plos_exp12/exp1dckfq.csv')
+ckfq<-read.csv('../data_plos_exp12/exp1dckfq.csv')
 
 ckfq$condition<-ifelse(ckfq$condition==0, "Independent", ckfq$condition)
 ckfq$condition<-ifelse(ckfq$condition==1, "c3", ckfq$condition)
@@ -785,7 +622,7 @@ summary(m2)
 
 
 ```{r}
-ckfq<-read.csv('/kyb/rg/swu/Nextcloud/Documents/chunking/data/data_plos_exp12/exp1dckfq.csv')
+ckfq<-read.csv('../data_plos_exp12/exp1dckfq.csv')
 
 ckfq$condition<-ifelse(ckfq$condition==0, "Independent", ckfq$condition)
 ckfq$condition<-ifelse(ckfq$condition==1, "c3", ckfq$condition)
@@ -848,7 +685,7 @@ anova(m1,m2)
 ```
 
 ```{r}
-ckru<-read.csv('/kyb/rg/swu/Nextcloud/Documents/chunking/data/data_plos_exp12/chunkreusep.csv')
+ckru<-read.csv('../data_plos_exp12/chunkreusep.csv')
 ckru<-subset(ckru, condition %in% c('c2', 'c3', 'Independent'))
 
 #for true delta, we need to subtract control
@@ -914,7 +751,7 @@ summary(m2)
 library(stringi)
 library(stringr)
 library(lsr)
-dat<-read.csv('/kyb/rg/swu/Nextcloud/Documents/chunking/data/data_plos_exp12/filtered_exp1.csv')
+dat<-read.csv('../data_plos_exp12/filtered_exp1.csv')
 #remove braces
 dat$keyassignment<-str_replace(dat$keyassignment, '\\[', '')
 dat$keyassignment<-str_replace(dat$keyassignment, '\\]', '')
@@ -1039,18 +876,5 @@ p6 <- ggplot(dp, aes(y=m, x=effect, fill=effect)) +
 #show!
 p6
 ```
-```{r}
-dd$chunkresp<-ifelse(paste(dd$last)==a & paste(dd$userpress)==b, 1, 0)
-dd$chunkresp<-ifelse(paste(dd$last)==b & paste(dd$userpress)==c, 1, dd$chunkresp)
-dd$chunkresp<-ifelse(paste(dd$last)==c & paste(dd$userpress)==d, 1, dd$chunkresp)
-dd$chunkresp<-ifelse(paste(dd$last)==d & paste(dd$userpress)==a, 1, dd$chunkresp)
-dd$incorrect<-ifelse(dd$correctcollect==1, 0, 1)
-dd$condition<-as.factor(dd$condition)
 
-m1<-glmer(chunkresp~condition*correctcollect+(1|id), data=dd, family="binomial")
-```
 
-```{r}
-m2<-glmer(chunkresp~correctcollect+(1|id), data=dd, family="binomial")
-anova(m1,m2)
-```
