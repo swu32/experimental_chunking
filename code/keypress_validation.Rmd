@@ -1,0 +1,260 @@
+---
+title: "Key mapping validation"
+output: html_notebook
+---
+
+```{r}
+#plyr can be used to manipulate data frames
+library(plyr)
+#ggplot is good for plotting
+library(ggplot2)
+#lmerTest loads mixed effects regressions and according t/z-tests
+library(lmerTest)
+#this is is cleaned data file
+library(stringi)
+library(stringr)
+library(lsr)
+
+dat<-read.csv('../data_plos_exp12/exp1chunkclassified.csv')
+
+```
+
+```{r}
+
+library(stringi)
+library(stringr)
+library(lsr)
+
+#remove braces
+dat$keyassignment<-str_replace(dat$keyassignment, '\\[', '')
+dat$keyassignment<-str_replace(dat$keyassignment, '\\]', '')
+
+#current instruction
+dat$current<-dat$userpress
+
+#last instruction
+dat$last<-c(1, paste(dat$userpress[-nrow(dat)]))
+dat<-subset(dat, block<3)
+#get A, B, C, and D
+a<-substr(dat$keyassignment, 2, 2)
+b<-substr(dat$keyassignment, 7, 7)
+c<-substr(dat$keyassignment, 12, 12)
+d<-substr(dat$keyassignment, 17, 17)
+dd <-subset(dat, block<3)
+
+
+#mark all chunks and their controls
+dd$size2chunk<-ifelse((dd$last==a & dd$current==b & dd$withinchunk=="True" | dd$last==c & dd$current==d & dd$withinchunk=="True" | dd$last==b & dd$current==c & dd$withinchunk=="True" | dd$last==d & dd$current==a & dd$withinchunk=="True"), 1, 0)
+dd$DF<-ifelse((dd$last=='D' & dd$current=='F' & dd$withinchunk=="True"), 1, 0)
+dd$JK<-ifelse((dd$last=='J' & dd$current=='K' & dd$withinchunk=="True"), 1, 0)
+
+```
+
+```{r}
+se<-function(x){sd(x)/sqrt(length(x))}
+
+dpdf<-ddply(dd,~condition,summarize, mean = round(mean(DF), 2), se = round(se(DF), 2)) 
+dpjk<-ddply(dd,~condition,summarize, mean = round(mean(JK), 2), se = round(se(JK), 2)) 
+dpck2<-ddply(dd,~condition,summarize, mean = round(mean(size2chunk), 2), se = round(se(size2chunk), 2)) 
+
+dp<-data.frame(type = c(rep('DF',3),rep('JK',3),rep('Size2chunks',3)), condition = rep(c(0,1,2),3), probability = c(dpdf$mean, dpjk$mean, dpck2$mean), se = c(dpdf$se, dpjk$se, dpck2$se))
+
+ddp<-ddply(dp,~type, summarize, mean = mean(probability), se = se(probability))
+
+p<-ggplot(ddp, aes(x = type, y = mean)) +     #mean 
+  stat_summary(fun = mean, geom = "bar", position = "dodge",fill = 'gray', color='black', width=0.5) +
+    geom_point()+
+  #error bars
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se),color='black', width = .25, position=position_dodge((width=0.9)))+ 
+  #text, expression changes the Delta to a Greek letter
+  ylab('probability') +
+  xlab('type') + 
+  theme_classic() +
+    #theme
+  theme(text = element_text(size=21,  family="sans"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="none")+
+    scale_y_continuous(expand = c(0,0))+
+  #title
+  ggtitle("Chunk Tendency") 
+
+
+p
+```
+
+
+```{r}
+dat<-read.csv('../data_plos_exp12/exp2chunkclassified.csv')
+
+#remove braces
+dat$keyassignment<-str_replace(dat$keyassignment, '\\[', '')
+dat$keyassignment<-str_replace(dat$keyassignment, '\\]', '')
+
+#current instruction
+dat$current<-dat$userpress
+
+#last instruction
+dat$last<-c(1, paste(dat$userpress[-nrow(dat)]))
+dat<-subset(dat, block<3)
+#get A, B, C, and D
+a<-substr(dat$keyassignment, 2, 2)
+b<-substr(dat$keyassignment, 7, 7)
+c<-substr(dat$keyassignment, 12, 12)
+d<-substr(dat$keyassignment, 17, 17)
+dd <-subset(dat, block<3)
+
+
+#mark all chunks and their controls
+dd$size2chunk<-ifelse((dd$last==a & dd$current==b & dd$withinchunk=="True" | dd$last==c & dd$current==d & dd$withinchunk=="True" | dd$last==b & dd$current==c & dd$withinchunk=="True" | dd$last==d & dd$current==a & dd$withinchunk=="True"), 1, 0)
+dd$DF<-ifelse((dd$last=='D' & dd$current=='F' & dd$withinchunk=="True"), 1, 0)
+dd$JK<-ifelse((dd$last=='J' & dd$current=='K' & dd$withinchunk=="True"), 1, 0)
+
+se<-function(x){sd(x)/sqrt(length(x))}
+
+dpdf<-ddply(dd,~condition,summarize, mean = round(mean(DF), 2), se = round(se(DF), 2)) 
+dpjk<-ddply(dd,~condition,summarize, mean = round(mean(JK), 2), se = round(se(JK), 2)) 
+dpck2<-ddply(dd,~condition,summarize, mean = round(mean(size2chunk), 2), se = round(se(size2chunk), 2)) 
+
+dp<-data.frame(type = c(rep('DF',2),rep('JK',2),rep('Size2chunks',2)), condition = rep(c('fast','accurate'),3), probability = c(dpdf$mean, dpjk$mean, dpck2$mean), se = c(dpdf$se, dpjk$se, dpck2$se))
+
+ddp<-ddply(dp,~type, summarize, mean = mean(probability), se = se(probability))
+
+p<-ggplot(ddp, aes(x = type, y = mean)) +     #mean 
+  stat_summary(fun = mean, geom = "bar", position = "dodge",fill = 'gray', color='black', width=0.5) +
+    geom_point()+
+  #error bars
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se),color='black', width = .25, position=position_dodge((width=0.9)))+ 
+  #text, expression changes the Delta to a Greek letter
+  ylab('probability') +
+  xlab('type') + 
+  theme_classic() +
+    #theme
+  theme(text = element_text(size=21,  family="sans"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="none")+
+    scale_y_continuous(expand = c(0,0))+
+  #title
+  ggtitle("Chunk Tendency") 
+
+
+p
+```
+
+
+```{r}
+
+#plyr can be used to manipulate data frames
+library(plyr)
+#ggplot is good for plotting
+library(ggplot2)
+#lmerTest loads mixed effects regressions and according t/z-tests
+library(lmerTest)
+#this is is cleaned data file
+library(stringi)
+library(stringr)
+library(lsr)
+
+
+dat<-read.csv('../data/cleanedex2.csv')
+
+library(stringi)
+library(stringr)
+library(lsr)
+
+#remove braces
+dat$keyassignment<-str_replace(dat$keyassignment, '\\[', '')
+dat$keyassignment<-str_replace(dat$keyassignment, '\\]', '')
+
+#current instruction
+dat$current<-dat$instructioncollect
+
+#last instruction
+dat$last<-c(1, paste(dat$instructioncollect[-nrow(dat)]))
+
+#only look at neutral blocks
+dd<-subset(dat, trialinstruction=="n")
+
+#remove first trial per block, since that doesn't have previous instruction
+dd<-subset(dd, trialcollect!=1)
+
+#label first and last two blocks
+dd$block<-rep(rep(c("first", "last"), each=198), length(unique(dat$id)))
+
+dd$condition<-ifelse(dd$condition==0, "fast", dd$condition)
+dd$condition<-ifelse(dd$condition==1, "accurate", dd$condition)
+
+#get A, B, C, and D
+a<-substr(dd$keyassignment, 2, 2)
+b<-substr(dd$keyassignment, 7, 7)
+c<-substr(dd$keyassignment, 12, 12)
+d<-substr(dd$keyassignment, 17, 17)
+
+dd$keyposition<- (a == "D" & b == "F") | (b == "D" & c == "F") | (c == "D" & d == "F") | (d == "D" & a == "F") | (a == "J" & b == "K") | (b == "J" & c == "K") | (c == "J" & d == "K") | (d == "J" & a == "K")
+#creat signed Cohen's d
+mycohen<-function(x, y){
+  #needs to be longer than 3
+  if (length(x)>4 & length(y>4)){
+  #Cohen's d  
+  d<-cohensD(x, y)
+  #sign based on mean
+  if (mean(x)<mean(y)){d<- -d}
+  }else { d<-NA}#NA if smaller than 3
+  #return d
+  return(d)
+}
+
+#mark all chunks and their controls
+dd$chunkab<-ifelse((dd$last==a & dd$current==b), 1, 0)
+dd$controlab<-ifelse((dd$last==a & dd$current!=b), 1, 0)
+dd$chunkcd<-ifelse((dd$last==c & dd$current==d), 1, 0)
+dd$controlcd<-ifelse((dd$last==c & dd$current!=d), 1, 0)
+dd$chunkbc<-ifelse((dd$last==b & dd$current==c), 1, 0)
+dd$controlbc<-ifelse((dd$last==b & dd$current!=c), 1, 0)
+dd$chunkda<-ifelse((dd$last==d & dd$current==a), 1, 0)
+dd$controlda<-ifelse((dd$last==d & dd$current!=a), 1, 0)
+
+#we select RTs smaller than 1000ms
+tselect<-1000
+
+#get all Cohen's ds
+dchunkab<-ddply(subset(dd, chunkab==1 & timecollect<=tselect), ~id, summarize,
+                d=mycohen(timecollect[block=="first"], timecollect[block=="last"]))$d# get the dth column from the 
+
+dchunkabcontrol<-ddply(subset(dd, controlab==1 & timecollect<=tselect), ~id, summarize, 
+                d=mycohen(timecollect[block=="first"], timecollect[block=="last"]))$d
+
+dchunkcd<-ddply(subset(dd, chunkcd==1 & timecollect<=tselect), ~id, summarize, 
+                d=mycohen(timecollect[block=="first"], timecollect[block=="last"]))$d
+
+dchunkcdcontrol<-ddply(subset(dd, controlcd==1 & timecollect<=tselect), ~id, summarize, 
+                       d=mycohen(timecollect[block=="first"], timecollect[block=="last"]))$d
+
+dchunkbc<-ddply(subset(dd, chunkbc==1 & timecollect<=tselect), ~id, summarize, 
+                d=mycohen(timecollect[block=="first"], timecollect[block=="last"]))$d
+
+dchunkbccontrol<-ddply(subset(dd, controlbc==1 & timecollect<=tselect), ~id, summarize, 
+                       d=mycohen(timecollect[block=="first"], timecollect[block=="last"]))$d
+
+dchunkda<-ddply(subset(dd, chunkda==1 & timecollect<=tselect), ~id, summarize, 
+                d=mycohen(timecollect[block=="first"], timecollect[block=="last"]))$d
+
+dchunkdacontrol<-ddply(subset(dd, controlda==1 & timecollect<=tselect), ~id, summarize, 
+                d=mycohen(timecollect[block=="first"], timecollect[block=="last"]))$d
+
+
+#labe condition
+# ddply(dat, ~id, summarize, cond=trialinstruction[201]) sort based on condition
+cond<-ifelse(ddply(dat, ~id, summarize, cond=trialinstruction[201])$cond=="f", "Fast", "Accurate")
+#for true delta, we need to subtract control
+data_delta<-data.frame(dchange=c(dchunkab-dchunkabcontrol, dchunkbc-dchunkbccontrol, dchunkcd-dchunkcdcontrol, dchunkda-dchunkdacontrol),cond=rep(cond, 4), id=rep(ddply(dat, ~id, summarize, cond=trialinstruction[201])$id, 4), keyposition = rep(ddply(dd, ~id, summarize, position=keyposition[201])$position, 4), trans=rep(c('high', 'med', 'high', 'med'), length(dchunkdacontrol)))
+
+
+#ifelse(df.isin(c(ab cd, bc, da)), 1,0)
+#ifelse(jk.isin(c(ab cd, bc, da)), 1,0)
+
+#fit without condition
+m1<-lmer(dchange~1+(1|id), data=data_delta)
+#with condition
+m2<-lmer(dchange~cond+(1|id), data=data_delta)
+
+m3<-lmer(dchange~cond*keyposition+(1|id), data=data_delta)
+
+#which one is better?
+anova(m2,m3)
+```

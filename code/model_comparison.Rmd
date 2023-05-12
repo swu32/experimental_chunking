@@ -1,0 +1,62 @@
+---
+title: "Model Comparison and Evaluation"
+output: html_notebook
+---
+
+
+```{r}
+dat<-read.csv('../data/modelcomparison.csv')
+library(lme4)
+library(lmerTest)
+```
+
+'rational_chunking_p w = 0.1', 'rational_chunking_rt w = 0.1',
+       'rational_chunking_p w = 0.2', 'rational_chunking_rt w = 0.2',
+       'rational_chunking_p w = 0.3', 'rational_chunking_rt w = 0.3',
+       'rational_chunking_p w = 0.4', 'rational_chunking_rt w = 0.4',
+       'rational_chunking_p w = 0.5', 'rational_chunking_rt w = 0.5',
+       'rational_chunking_p w = 0.6', 'rational_chunking_rt w = 0.6',
+       'parser_log_p forgetting_decrement = 0.03 percept_increment = 0.5',
+       'parser_log_p forgetting_decrement = 0.03 percept_increment = 1.0',
+       'parser_log_p forgetting_decrement = 0.03 percept_increment = 1.5',
+       'parser_log_p forgetting_decrement = 0.04 percept_increment = 0.5',
+       'parser_log_p forgetting_decrement = 0.04 percept_increment = 1.0',
+       'parser_log_p forgetting_decrement = 0.04 percept_increment = 1.5',
+       'parser_log_p forgetting_decrement = 0.05 percept_increment = 0.5',
+       'parser_log_p forgetting_decrement = 0.05 percept_increment = 1.0',
+       'parser_log_p forgetting_decrement = 0.05 percept_increment = 1.5',
+       'parser_log_p forgetting_decrement = 0.06 percept_increment = 0.5',
+       'parser_log_p forgetting_decrement = 0.06 percept_increment = 1.0',
+       'parser_log_p forgetting_decrement = 0.06 percept_increment = 1.5',
+       'parser_log_p forgetting_decrement = 0.07 percept_increment = 0.5',
+       'parser_log_p forgetting_decrement = 0.07 percept_increment = 1.0',
+       'parser_log_p forgetting_decrement = 0.07 percept_increment = 1.5',
+       'associative_learner_p theta = 0.7',
+       'associative_learning_log_p theta = 0.7',
+       'associative_learner_p theta = 0.8',
+       'associative_learning_log_p theta = 0.8',
+       'associative_learner_p theta = 0.9',
+       'associative_learning_log_p theta = 0.9',
+       'associative_learner_p theta = 1',
+       'associative_learning_log_p theta = 1', 
+      
+```{r}
+dat$rational_chunking_p.w...0.1<-as.numeric(scale(dat$rational_chunking_p.w...0.1))
+dat$last<-c(1, paste(dat$seq[-nrow(dat)]))
+dat$rep<-ifelse(dat$seq==dat$last, 1, 0)
+
+#m1<-lmer('subject_rt ~ associative_learning_log_p.theta...1 + (associative_learning_log_p.theta...1|id) ', data=dat)
+for (ID in unique(dat$id)) {
+dat$rational_chunking_p.w...1[!is.finite(dat$rational_chunking_p.w...1)] <- NA
+data<-dat[dat$id == ID && dat$rep == 0]
+y<-data$subject_rt # measurement 
+x<-data$rational_chunking_p.w...1 # model prediction
+Model <- lm(y~1+x, data, na.action=na.exclude)
+Residuals <- summary(Model)$residuals
+SumResSquared <- sum(Residuals^2)
+TotalSumSquares <- sum((y - mean(y))^2)
+RSquared <- 1 - (SumResSquared/TotalSumSquares)
+print(RSquared)
+}
+
+```

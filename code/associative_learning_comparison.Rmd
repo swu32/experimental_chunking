@@ -1,0 +1,555 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+#plyr can be used to manipulate data frames
+library(plyr)
+#ggplot is good for plotting
+library(ggplot2)
+#lmerTest loads mixed effects regressions and according t/z-tests
+library(lmerTest)
+#load data file of chunk size increase by trial number
+datsubj<-read.csv('/Users/swu/Desktop/research/chunking/code/when&how/chunksizetrialnumber.csv')
+df<-subset(datsubj, condition %in% c('ind', 'c2','c3'))
+df$condition<-as.factor(df$condition)
+df$condition<-relevel(df$condition, ref = 'ind')
+
+#ggplot(data = df, aes(x = trialnumber, y = chunksize, color = condition)) +
+ #   geom_line()
+
+
+#ggplot() + geom_point(data = subset(df, condition == 'ind' ), aes(x = trialnumber, y = chunksize),size = 0.5,colour = '#00707A',  alpha = 0.1) + ylab('Chunk Size') + xlab('Trial Number') + geom_smooth(data = subset(df, condition == 'ind' ),aes(x = trialnumber, y = chunksize, colour = '#FC4E07'))+ theme_classic() +  theme(text = element_text(size=21,  family="sans"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="none")
+
+
+df<-subset(df,trialnumber<=800 & trialnumber >=200)
+
+df$trialnumber<-as.numeric(scale(df$trialnumber))
+
+m1<-lmer('chunksize ~ trialnumber*condition + (1 + trialnumber |ID)',REML = FALSE, data=df)
+betas<-summary(m1)
+print(summary(m1))
+```
+
+```{r}
+m2<-lmer('chunksize ~ trialnumber + ( 1 + trialnumber |ID)', data=df)
+betas<-summary(m2)
+print(summary(m2))
+```
+
+```{r}
+anova(m2, m1)
+```
+
+Chunk growth rate. 
+```{r}
+
+df_ind<-subset(df, condition == 'ind' )
+m_ind<-lmer('chunksize ~ trialnumber+(1|ID)', data=df_ind)
+sm_ind<-summary(m_ind)
+
+
+df_c2<-subset(df, condition == 'c2' )
+m_c2<-lmer('chunksize ~ trialnumber+(1|ID)', data=df_c2)
+sm_c2<-summary(m_c2)
+
+df_c3<-subset(df, condition == 'c3' )
+m_c3<-lmer('chunksize ~ trialnumber+(1|ID)', data=df_c3)
+sm_c3<-summary(m_c3)
+
+#extract coefficients
+m<-c(sm_ind$coefficients[2,1], sm_c2$coefficients[2,1], sm_c3$coefficients[2,1]) 
+se<-c(sm_ind$coefficients[2,2], sm_c2$coefficients[2,2], sm_c3$coefficients[2,2]) 
+
+#data frame
+dp<-data.frame(m, se, condition=c('Independent', 'Size 2', 'Size 3'))
+#effect
+dp$condition<-factor(dp$condition, levels=c('Independent', 'Size 2', 'Size 3'))
+```
+
+```{r}
+
+#show plot
+p6 <- ggplot(dp, aes(y=m, x=condition, fill=condition)) +
+  #show mean
+  stat_summary(fun = mean, geom = "bar", position = "dodge", color='black', width=0.5) + 
+  #point
+  
+  geom_point()+
+  #error bar
+  geom_errorbar(aes(ymin=m-se, ymax=m+se),color='black', width = .25, position=position_dodge((width=0.9))) +
+  #labs
+  ylab("Chunk Growth Rate")+
+  xlab("Condition")+ 
+  #classic theme
+  theme_classic()+
+  #fills
+  scale_fill_manual(values=(c("#00707A", "#83C5BE", "#F0F8FA")))+
+  #theme change
+  theme(text = element_text(size=21,  family="sans"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="none")+
+  #no legend
+  guides(color="none", shape="none")+
+  #line at 0
+  ggtitle("Participants")+
+  geom_hline(yintercept=0)+
+  theme(text=element_text(size=14), legend.text = element_text(size=20)) 
+
+#+coord_fixed(2500)
+#show!
+p6
+```
+
+
+```{r}
+dat<-read.csv('/Users/swu/Desktop/research/chunking/scientific_report_official/Data/associative_learning_chunksize_trialnumber.csv')
+
+df<-subset(dat, condition %in% c('ind', 'c2','c3'))
+df<-subset(df,trialnumber<=800 & trialnumber >=200)
+df$trialnumber<-as.numeric(scale(df$trialnumber))
+
+df$condition<-as.factor(df$condition)
+df$condition<-relevel(df$condition, ref = 'ind')
+
+m1<-lmer('chunksize ~ trialnumber*condition + (1 + trialnumber |ID)',REML = FALSE, data=df)
+betas<-summary(m1)
+print(summary(m1))
+```
+```{r}
+
+m2<-lmer('chunksize ~ trialnumber + ( 1 + trialnumber |ID)', data=df)
+betas<-summary(m2)
+print(summary(m2))
+```
+
+```{r}
+
+df_ind<-subset(df, condition == 'ind' )
+m_ind<-lm('chunksize ~ trialnumber+(1|ID)', data=df_ind)
+sm_ind<-summary(m_ind)
+
+
+df_c2<-subset(df, condition == 'c2' )
+m_c2<-lm('chunksize ~ trialnumber+(1|ID)', data=df_c2)
+sm_c2<-summary(m_c2)
+
+df_c3<-subset(df, condition == 'c3' )
+m_c3<-lm('chunksize ~ trialnumber+(1|ID)', data=df_c3)
+sm_c3<-summary(m_c3)
+
+#extract coefficients
+m<-c(sm_ind$coefficients[2,1], sm_c2$coefficients[2,1], sm_c3$coefficients[2,1]) 
+se<-c(sm_ind$coefficients[2,2], sm_c2$coefficients[2,2], sm_c3$coefficients[2,2]) 
+
+#data frame
+dp<-data.frame(m, se, condition=c('Independent', 'Size 2', 'Size 3'))
+#effect
+dp$condition<-factor(dp$condition, levels=c('Independent', 'Size 2', 'Size 3'))
+
+#show plot
+p7 <- ggplot(dp, aes(y=m, x=condition, fill=condition)) +
+  #show mean
+  stat_summary(fun = mean, geom = "bar", position = "dodge", color='black', width=0.5) + 
+  #point
+  geom_point()+
+  #error bar
+  geom_errorbar(aes(ymin=m-se, ymax=m+se),color='black', width = .25, position=position_dodge((width=0.9))) +
+  #labs
+  ylab("Chunk Growth Rate ")+
+  xlab("Condition")+ 
+  #classic theme
+  theme_classic()+
+  #fills
+  scale_fill_manual(values=(c("#00707A", "#83C5BE", "#F0F8FA")))+
+  #theme change
+  theme(text = element_text(size=21,  family="sans"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="none")+
+  #no legend
+  guides(color="none", shape="none")+
+  #line at 0
+  ggtitle("Associative Learning")+
+  geom_hline(yintercept=0)+
+  theme(text=element_text(size=14), legend.text = element_text(size=20)) #show!
+p7
+```
+
+
+```{r}
+library(patchwork)
+
+p6 + p7 
+```
+```{r}
+dat<-read.csv('../data/exp1chunkclassified.csv')
+#remove braces
+dat$keyassignment<-str_replace(dat$keyassignment, '\\[', '')
+dat$keyassignment<-str_replace(dat$keyassignment, '\\]', '')
+
+dd<-dat
+#current instruction
+dd$current<-dd$instructioncollect
+#last instruction
+dd$last<-c(1, paste(dd$instructioncollect[-nrow(dd)]))
+
+
+#get A, B, C, and D
+a<-substr(dd$keyassignment, 2, 2)
+b<-substr(dd$keyassignment, 7, 7)
+c<-substr(dd$keyassignment, 12, 12)
+d<-substr(dd$keyassignment, 17, 17)
+
+#mark all chunks and their controls
+dd$chunkbc<-ifelse((dd$last==b & dd$current==c & dd$withinchunk=='False'), 1, 0)
+dd$chunkcd<-ifelse((dd$last==c & dd$current==d & dd$withinchunk=='False'), 1, 0)
+dd$chunkda<-ifelse((dd$last==d & dd$current==a & dd$withinchunk=='False'), 1, 0)
+```
+
+
+
+```{r}
+dat_al<-read.csv('../data/exp1_associative_learning_rt_classified.csv')
+
+#current instruction
+dat_al$current<-dat_al$seq
+#last instruction
+dat_al$last<-c(1, paste(dat_al$seq[-nrow(dat_al)]))
+
+#mark all chunks and their controls
+dat_al$chunkbccdda<-ifelse(( (dat_al$last==2 & dat_al$current==3 & dat_al$withinchunk=='False') | (dat_al$last==3 & dat_al$current==4 & dat_al$withinchunk=='False') | (dat_al$last==4 & dat_al$current==1 & dat_al$withinchunk=='False')), 1, 0)
+
+dat_al$trialnumber<-rep(seq(1,1000,by=1),142)
+
+dbccdda<-ddply(dat_al, .(unique(block)), summarize, mean=round(chunkbccdda,2))# get the dth column from the 
+
+
+library(ggplot2)
+# Basic line plot with points
+p <- ggplot(dat_al, aes(x=trialnumber, y=chunkbccdda))+
+    geom_line( color="steelblue") + 
+  geom_point() 
+
+
+```
+
+```{r}
+data<- ddply(dat_al, .(block,condition), summarise,
+   mean = mean (chunkbccdda))
+
+data<-dat_al$chunkbccdda
+plot(data,main='trialnumber',ylab='chunkbccdda')
+
+ddply(d, .(day), summarise,
+ minTemp = min(Temp),
+ Temp = mean (Temp))
+ 
+ 
+lines(rollmean(data,5),col='blue')
+lines(rollmean(data,40),col='red')
+legend(1950,600,col=c('black','blue', 'red'),legend=c('Raw', 'SMA 5', 'SMA 40'),lty=1,cex=0.8)
+
+```
+
+```{r}
+df<-subset(dat, condition %in% c('fast', 'acc') )
+df$condition<-as.factor(df$condition)
+df$condition<-relevel(df$condition, ref = 'acc')
+
+m1<-lmer('chunksize ~ trialnumber*condition + (condition + 1 |ID)', data=df)
+betas<-summary(m1)
+print(summary(m1))
+```
+
+
+```{r}
+df<-subset(dat, condition %in% c('fast', 'acc') )
+df$condition<-as.factor(df$condition)
+df$condition<-relevel(df$condition, ref = 'acc')
+
+m2<-lmer('chunksize ~ trialnumber + ( 1|ID)', data=df)
+betas<-summary(m2)
+print(summary(m2))
+```
+
+
+```{r}
+m3<-lmer('chunksize ~  ( 1 |ID)', data=df)
+betas<-summary(m3)
+print(summary(m3))
+```
+
+```{r}
+anova(m2, m1)
+```
+
+```{r}
+anova(m2, m3)
+```
+
+
+```{r}
+
+df_fa<-subset(dat, condition == 'fast' )
+m_fa<-lm('chunksize ~ trialnumber+1', data=df_fa)
+sm_fa<-summary(m_fa)
+
+df_ac<-subset(dat, condition == 'acc' )
+m_ac<-lm('chunksize ~ trialnumber+1', data=df_ac)
+sm_ac<-summary(m_ac)
+
+#extract coefficients
+m<-c(sm_fa$coefficients[2,1], sm_ac$coefficients[2,1]) 
+se<-c(sm_fa$coefficients[2,2], sm_ac$coefficients[2,2]) 
+
+#data frame
+dp<-data.frame(m, se, condition=c('Fast', 'Accurate'))
+#effect
+dp$condition<-factor(dp$condition, levels=c('Accurate', 'Fast'))
+```
+
+```{r}
+
+#show plot
+p7 <- ggplot(dp, aes(y=m, x=condition, fill=condition)) +
+  #show mean
+  stat_summary(fun = mean, geom = "bar", position = "dodge", color='black', width=0.5) + 
+  #point
+  geom_point()+
+  #error bar
+  geom_errorbar(aes(ymin=m-se, ymax=m+se),color='black', width = .25, position=position_dodge((width=0.9))) +
+  #labs
+  ylab(expression(beta))+
+  xlab("Condition")+ 
+  #classic theme
+  theme_classic()+
+  #fills
+  scale_fill_manual(values=(c("#5F4B8BFF", "#E69A8DFF")))+
+  #theme change
+  theme(text = element_text(size=21,  family="sans"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="none")+
+  #no legend
+  guides(color="none", shape="none")+
+  ggtitle("Chunk Growth Rate")+
+  #line at 0
+  geom_hline(yintercept=0)+
+  theme(text=element_text(size=24), legend.text = element_text(size=20)) +
+  coord_fixed(2000)
+#show!
+p7
+```
+
+
+```{r}
+ckru<-read.csv('../data/chunkreusep.csv')
+ckru<-subset(ckru, condition %in% c('Accurate', 'Fast'))
+
+#for true delta, we need to subtract control
+
+se<-function(x){sd(x)/sqrt(length(x))}
+
+dp<-ddply(na.omit(ckru), ~condition, summarize, m=mean(reuse_p),
+          se=se(reuse_p))
+
+dp$condition <- factor(dp$condition,                                    # Change ordering manually
+                  levels = c("Accurate", "Fast"))
+
+#create plot
+p10 <- ggplot(dp, aes(y=m, x=condition, fill=condition)) +
+  #mean 
+  stat_summary(fun = mean, geom = "bar", position = "dodge", color='black', width=0.5) + 
+  geom_point()+
+  #error bars
+  geom_errorbar(aes(ymin=m-se, ymax=m+se),color='black', width = .25, position=position_dodge((width=0.9))) +
+  #text, expression changes the Delta to a Greek letter
+  ylab("P")+
+  #xlab
+  xlab("Condition")+ 
+  #theme
+  theme_classic()+#
+  #color scheme
+  scale_fill_manual(values=(c("#5F4B8BFF", "#E69A8DFF")))+
+  #theme
+  theme(text = element_text(size=21,  family="sans"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="none")+
+  #no legend
+  guides(color="none", shape="none")+
+  #scale y
+  geom_hline(yintercept=0)+
+  #scale y
+  scale_y_continuous(expand = c(0,0),
+                     limits = c(0,1)) +
+  ggtitle("Chunk Reuse Probability") +
+                    theme(text = element_text(size=24),
+            legend.text = element_text(size = 20))+
+  coord_fixed(2)
+
+#show!
+p10
+```
+
+
+
+```{r}
+ckru<-read.csv('../data/chunk_reuse_exp1_associative_learning.csv')
+ckru<-subset(ckru, condition %in% c('c2', 'c3', 'ind'))
+
+#for true delta, we need to subtract control
+
+se<-function(x){sd(x)/sqrt(length(x))}
+
+dp<-ddply(na.omit(ckru), ~condition, summarize, m=mean(reuse_p),
+          se=se(reuse_p))
+
+dp$condition <- factor(dp$condition,                                    # Change ordering manually
+                  levels = c("ind", "c2", "c3"))
+
+#create plot
+p10 <- ggplot(dp, aes(y=m, x=condition, fill=condition)) +
+  #mean 
+  stat_summary(fun = mean, geom = "bar", position = "dodge", color='black', width=0.5) + 
+  geom_point()+
+  #error bars
+  geom_errorbar(aes(ymin=m-se, ymax=m+se),color='black', width = .25, position=position_dodge((width=0.9))) +
+  #text, expression changes the Delta to a Greek letter
+  ylab("P")+
+  #xlab
+  xlab("Condition")+ 
+  #theme
+  theme_classic()+#
+  #color scheme
+  scale_fill_manual(values=(c("#F0F8FA", "#83C5BE","#00707A")))+
+  #theme
+  theme(text = element_text(size=21,  family="sans"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="none")+
+  #no legend
+  guides(color="none", shape="none")+
+  #scale y
+  geom_hline(yintercept=0)+
+  #scale y
+  scale_y_continuous(expand = c(0,0),
+                     limits = c(0,1)) +
+  ggtitle("Chunk Reuse Probability")+
+  coord_fixed(3)
+#show!
+p10
+```
+```{r}
+ckru$condition <- factor(ckru$condition,                                    # Change ordering manually
+                  levels = c("ind", "c2", "c3"))
+#fit without condition
+m1<-lm(reuse_p~1, data=ckru)
+#with condition
+m2<-lm(reuse_p~condition, data=na.omit(ckru))
+#which one is better?
+anova(m1,m2)
+# Plot Chunk Frequency
+```
+
+```{r}
+ckru$condition <- factor(ckru$condition,                                    # Change ordering manually
+                  levels = c("c2", "Independent", "c3"))
+m2<-lm(reuse_p~condition, data=na.omit(ckru))
+#which one is better?
+summary(m2)
+# Plot Chunk Frequency
+```
+```{r}
+# look at the learning rate for within and between chunk transition probability
+
+dat<-read.csv('../data/exp1chunkclassified.csv')
+#full data set without high RTs excluded
+
+```
+
+```{r}
+
+library(stringi)
+library(stringr)
+library(lsr)
+
+#remove braces
+dat$keyassignment<-str_replace(dat$keyassignment, '\\[', '')
+dat$keyassignment<-str_replace(dat$keyassignment, '\\]', '')
+
+#current instruction
+dat$current<-dat$instructioncollect
+dat$trialnumber<- rep(1:1000,length(unique(dat$id)))
+
+#last instruction
+dat$last<-c(1, paste(dat$instructioncollect[-nrow(dat)]))
+
+
+#dd<-dat[dat$block %in% c(1,2,9,10),]
+dd<-dat[dat$block %in% c(3,4,5,6,7,8),]#only look at training blocks, the learning rate of within and between chunks 
+
+dd$condition<-ifelse(dd$condition==0, "indep", dd$condition)
+dd$condition<-ifelse(dd$condition==1, "c3", dd$condition)
+dd$condition<-ifelse(dd$condition==2, "c2", dd$condition)
+
+#remove first trial per block, since that doesn't have previous instruction
+dd<-subset(dd, trialcollect!=1 & timecollect < 2000)
+
+#get A, B, C, and D
+a<-substr(dd$keyassignment, 2, 2)
+b<-substr(dd$keyassignment, 7, 7)
+c<-substr(dd$keyassignment, 12, 12)
+d<-substr(dd$keyassignment, 17, 17)
+```
+
+```{r}
+ddab<-subset(dd)
+#ddab<-dd
+
+ddab$trialnumber<-as.numeric(scale(ddab$trialnumber))
+
+m1<-lmer('timecollect ~ trialnumber*withinchunk + (1 + trialnumber+ withinchunk |id)',REML = TRUE, data=ddab)
+print(summary(m1))
+m2<-lmer('timecollect ~ trialnumber + withinchunk +  (1+ trialnumber+ withinchunk |id)', REML = TRUE,data=ddab)
+print(summary(m2))
+
+#which one is better?
+anova(m1,m2)
+
+```
+
+
+```{r}
+#ddab<-subset(dd, ((dd$last == b & dd$current == c) | (dd$last == d & dd$current == a)  ) & dd$id == 3)
+ddab<-subset(dd, (dd$last != dd$current) & dd$id == 7)
+
+ggplot(ddab, aes(x=trialnumber, y=timecollect, color = withinchunk, shape = withinchunk)) + geom_point() + 
+  geom_smooth(method=lm, se = TRUE) +   theme_classic() +   scale_y_continuous(
+                     limits = c(300,800)) + scale_color_brewer(palette="Dark2")+
+    theme(text = element_text(size=21,  family="sans"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="right")+
+  ggtitle("Learning Rate")+
+  coord_fixed(2)
+
+```
+```{r}
+ddab<-subset(dd,dd$condition == 'c3')
+#get A, B, C, and D
+a<-substr(ddab$keyassignment, 2, 2)
+b<-substr(ddab$keyassignment, 7, 7)
+c<-substr(ddab$keyassignment, 12, 12)
+d<-substr(ddab$keyassignment, 17, 17)
+
+ddab$chunk <- ifelse((ddab$last == a & ddab$current == b| ddab$last == b & ddab$current == c), TRUE, FALSE)
+  
+ddab$trialnumber<-as.numeric(scale(ddab$trialnumber))
+
+m1<-lmer('timecollect ~ trialnumber*chunk + (1 + trialnumber+ chunk |id)',REML = TRUE, data=ddab)
+print(summary(m1))
+m2<-lmer('timecollect ~ trialnumber + chunk +  (1+ trialnumber+ chunk |id)', REML = TRUE,data=ddab)
+print(summary(m2))
+
+#which one is better?
+anova(m1,m2)
+
+```
+
+```{r}
+ddab<-subset(ddab, ddab$id == 7)
+ggplot(ddab, aes(x=trialnumber, y=timecollect, color = chunk, shape = chunk)) + geom_point() + 
+  geom_smooth(method=lm, se = TRUE) +   theme_classic() +   scale_y_continuous(
+                     limits = c(200,1000)) + scale_color_brewer(palette="Dark2")+
+    theme(text = element_text(size=21,  family="sans"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="right")+
+  ggtitle("Learning Rate")+  coord_fixed(0.010)
+
+
+```

@@ -5,12 +5,133 @@ import json
 from math import log10, floor
 
 
-""" The so-called future is no more than a result from the decision that we made today. 
-
-
-                                                                                                    --- Mahabharata """
 
 """Helper Functions"""
+
+
+import matplotlib
+
+def heatmap(data, row_labels, col_labels, ax=None,
+            cbar_kw=None, cbarlabel="", **kwargs):
+    """
+    Create a heatmap from a numpy array and two lists of labels.
+
+    Parameters
+    ----------
+    data
+        A 2D numpy array of shape (M, N).
+    row_labels
+        A list or array of length M with the labels for the rows.
+    col_labels
+        A list or array of length N with the labels for the columns.
+    ax
+        A `matplotlib.axes.Axes` instance to which the heatmap is plotted.  If
+        not provided, use current axes or create a new one.  Optional.
+    cbar_kw
+        A dictionary with arguments to `matplotlib.Figure.colorbar`.  Optional.
+    cbarlabel
+        The label for the colorbar.  Optional.
+    **kwargs
+        All other arguments are forwarded to `imshow`.
+    """
+
+    if ax is None:
+        ax = plt.gca()
+
+    if cbar_kw is None:
+        cbar_kw = {}
+
+    # Plot the heatmap
+    im = ax.imshow(data, **kwargs)
+
+    # Create colorbar
+    cbar = ax.figure.colorbar(im, ax=ax, **cbar_kw)
+    #cbar.set_clim(0, 1.0)
+
+    cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom")
+
+    # Show all ticks and label them with the respective list entries.
+    ax.set_xticks(np.arange(data.shape[1]))
+    ax.set_yticks(np.arange(data.shape[0]))
+
+    ax.set_xticklabels(col_labels,fontsize=40)
+    ax.set_yticklabels(row_labels,fontsize=40)
+    # Let the horizontal axes labeling appear on top.
+#     ax.tick_params(top=True, bottom=False,
+#                    labeltop=True, labelbottom=False)
+
+    # Rotate the tick labels and set their alignment.
+    # plt.setp(ax.get_xticklabels(), rotation=-30, ha="right",rotation_mode="anchor")
+
+    # Turn spines off and create white grid.
+    #ax.spines[:].set_visible(False)
+
+    ax.set_xticks(np.arange(data.shape[1]+1)-.5, minor=True)
+    ax.set_yticks(np.arange(data.shape[0]+1)-.5, minor=True)
+    ax.grid(which="minor", color="w", linestyle='-', linewidth=3)
+    ax.tick_params(which="minor", bottom=False, left=False)
+
+    return im, cbar
+
+
+def annotate_heatmap(im, data=None, valfmt="{x:.2f}",
+                     textcolors=("white", "black"),
+                     threshold=None, **textkw):
+    """
+    A function to annotate a heatmap.
+
+    Parameters
+    ----------
+    im
+        The AxesImage to be labeled.
+    data
+        Data used to annotate.  If None, the image's data is used.  Optional.
+    valfmt
+        The format of the annotations inside the heatmap.  This should either
+        use the string format method, e.g. "$ {x:.2f}", or be a
+        `matplotlib.ticker.Formatter`.  Optional.
+    textcolors
+        A pair of colors.  The first is used for values below a threshold,
+        the second for those above.  Optional.
+    threshold
+        Value in data units according to which the colors from textcolors are
+        applied.  If None (the default) uses the middle of the colormap as
+        separation.  Optional.
+    **kwargs
+        All other arguments are forwarded to each call to `text` used to create
+        the text labels.
+    """
+
+    if not isinstance(data, (list, np.ndarray)):
+        data = im.get_array()
+
+    # Normalize the threshold to the images color range.
+    if threshold is not None:
+        threshold = im.norm(threshold)
+    else:
+        threshold = im.norm(data.max())/2.
+
+    # Set default alignment to center, but allow it to be
+    # overwritten by textkw.
+    kw = dict(horizontalalignment="center",verticalalignment="center")
+    kw.update(textkw)
+
+    # Get the formatter in case a string is supplied
+    if isinstance(valfmt, str):
+        valfmt = matplotlib.ticker.StrMethodFormatter(valfmt)
+
+    # Loop over the data and create a `Text` for each "pixel".
+    # Change the text's color depending on the data.
+    texts = []
+    for i in range(data.shape[0]):
+        for j in range(data.shape[1]):
+            kw.update(color=textcolors[int(im.norm(data[i, j]) > threshold)])
+            text = im.axes.text(j, i, valfmt(data[i, j], None),fontsize=20, **kw)
+            texts.append(text)
+
+    return texts
+
+
 
 def generate_independent_sequence(n_sample = 1000):
     stim_set = [(0,),(1,1,1),(2,)]
@@ -1003,65 +1124,6 @@ def search_hypothesis(observation):
 
 
 
-# helper functions
-def eval_M_T(M,T,partitioned_sequence):
-    """checked"""
-    bag_of_chunks = M.index.tolist()
-    
-    for chunk in bag_of_chunks:
-        parsed_chunk = json.loads(chunk)
-        M.loc[chunk,'P'] = get_M_from_partitioned_sequence(parsed_chunk,partitioned_sequence)
-    for chunk1 in bag_of_chunks:
-        for chunk2 in bag_of_chunks:
-            parsed_chunk1 = json.loads(chunk1)
-            parsed_chunk2 = json.loads(chunk2)
-            T.loc[chunk1,chunk2] = get_T_from_partitioned_sequence(parsed_chunk1,parsed_chunk2,partitioned_sequence)
-    return M, T
-
-
-
-
-def eval_M_T_from_original_sequence(M,T,original_sequence):
-    bag_of_chunks = M.index.tolist()
-
-    '''checked'''
-
-
-    '''Get the estimated empirical probability of P(chunk2|chunk1),the probability of chunk2 followed by chunk1, 
-    in the generated sequence
-    In the case when chunk1 never occurs, output the probability of 0'''
-    chunk1_count = 0
-    chunk1_chunk2 = 0
-    # the transition probability from chunk1 to chunk2
-    # get P(chunk2|chunk1)
-    not_over = True
-    i = 0
-    for candidate_chunk in partitioned_sequence: 
-        if candidate_chunk == chunk1:
-            chunk1_count +=1
-            if i+1 < len(partitioned_sequence):
-                candidate2 = partitioned_sequence[i+1]
-                if candidate2 == chunk2:
-                    chunk1_chunk2+=1
-        i = i+1
-    if chunk1_count>0:
-        return chunk1_chunk2/chunk1_count
-    else:
-        return 0.0 # returns 0 if there is no occurrance for the first probabilility
-
-    '''Get the estimated empirical probability of P(chunk),the probability of chunk2 followed by chunk1, 
-    in the generated sequence
-    In the case when chunk1 never occurs, output the probability of 0'''
-    n_total = 0
-    chunk1_count = 0
-    for candidate_chunk in partitioned_sequence: 
-        if candidate_chunk == chunk:
-            chunk1_count +=1
-
-    if chunk1_count>0:return chunk1_count/len(partitioned_sequence)
-    else:return 0.0
-    
-
 
 
 # testing ring. 
@@ -1111,8 +1173,76 @@ def sample_from_list_distribution(states,prob):
                 if (k < cdf[i]):
                     return states[i-1],prob[i-1]
     
+def identify_press(dff, keydff, idx):
+    """input: the row of a dataframe """
+    # identify chunks
+    if dff.loc[idx]['userpress'] == keydff.loc[idx][2]:
+        return 1
+    if dff.loc[idx]['userpress'] == keydff.loc[idx][5]:
+        return 2
+    if dff.loc[idx]['userpress'] == keydff.loc[idx][8]:
+        return 3
+    if dff.loc[idx]['userpress'] == keydff.loc[idx][11]:
+        return 4
+    else:
+        return None
+
+
+
     
     
+def process_experiment1_into_chunks_by_condition(pathex1):
+    '''Takes in empirical or simulated reaction time and their within/between-chunk classification, outputs time series of chunks that are grouped
+    by participants.'''
+    dff = pd.read_csv(pathex1)
+    subject_ids = list(np.unique(dff['id']))
+    keydff = dff['keyassignment'].str.split(r"\[|]|'|,", expand = True) # spilt key index to identify keys
+
+    indep_chunks = {}
+    c3_chunks = {}# dictionary to record chunk 3
+    c2_chunks = {}# dictionary to record chunk2
+
+    idx = 0
+    for subject_id in subject_ids: 
+        if dff[dff['id'] == subject_id]['condition'].tolist()[0] == 2: # [12] [3] [4] 
+            chunk_collect = c2_chunks    
+        if dff[dff['id'] == subject_id]['condition'].tolist()[0] == 1: # [123] [4]
+            chunk_collect = c3_chunks    
+        if dff[dff['id'] == subject_id]['condition'].tolist()[0] == 0: # [1] [2] [3] [4]
+            chunk_collect = indep_chunks
+        # process chunks and load them in the chunk collect
+        name = str(subject_id)
+        chunk_collect[name] = []
+        # iterate in every block, single chunk are recorded by iteself.
+        for block in range(1,11):
+            i = 0
+            for trial in range(1,101):
+                chunk = []# initiate with an empty chunk 
+                this_row = dff[(dff['id'] == subject_id) & (dff['trialcollect'] == trial) & (dff['block'] == block)]
+                if this_row['withinchunk'].tolist()[0] == False:
+                    # search back in time to find another false:
+                    index = dff.index[(dff['id'] == subject_id) & (dff['trialcollect'] == trial) & (dff['block'] == block)].tolist()[0]
+                    keypress = identify_press(dff, keydff, index)
+                    chunk.append(keypress)
+                    next_trial = trial + 1
+                    if next_trial <=100: 
+                        nextrow = dff[(dff['id'] == subject_id) & (dff['trialcollect'] == next_trial) & (dff['block'] == block)]
+                        while nextrow['withinchunk'].tolist()[0] == True and next_trial<=100:
+                            index = dff.index[(dff['id'] == subject_id) & (dff['trialcollect'] == next_trial) & (dff['block'] == block)].tolist()[0]
+                            keypress = identify_press(dff, keydff, index)
+                            chunk.append(keypress)
+                            next_trial = next_trial + 1
+                            nextrow = dff[(dff['id'] == subject_id) & (dff['trialcollect'] == next_trial) & (dff['block'] == block)]
+                            if len(nextrow)==0:
+                                break
+                    chunk_collect[name].append(chunk)
+                    i = i + len(chunk)
+                else:
+                    pass
+                
+    return indep_chunks, c2_chunks, c3_chunks
+
+
 def partition_seq(this_sequence,bag_of_chunks):
     '''checked'''
     # find the maximal chunk that fits the sequence
@@ -1142,50 +1272,8 @@ def partition_seq(this_sequence,bag_of_chunks):
             
     return partitioned_sequence
     
-    
-def get_T_from_partitioned_sequence(chunk1,chunk2,partitioned_sequence):
-    '''checked'''
-
-
-    '''Get the estimated empirical probability of P(chunk2|chunk1),the probability of chunk2 followed by chunk1, 
-    in the generated sequence
-    In the case when chunk1 never occurs, output the probability of 0'''
-    chunk1_count = 0
-    chunk1_chunk2 = 0
-    # the transition probability from chunk1 to chunk2
-    # get P(chunk2|chunk1)
-    not_over = True
-    i = 0
-    for candidate_chunk in partitioned_sequence: 
-        if candidate_chunk == chunk1:
-            chunk1_count +=1
-            if i+1 < len(partitioned_sequence):
-                candidate2 = partitioned_sequence[i+1]
-                if candidate2 == chunk2:
-                    chunk1_chunk2+=1
-        i = i+1
-    if chunk1_count>0:
-        return chunk1_chunk2/chunk1_count
-    else:
-        return 0.0 # returns 0 if there is no occurrance for the first probabilility
-
 
     
-def get_M_from_partitioned_sequence(chunk,partitioned_sequence):
-    '''checked'''
-
-
-    '''Get the estimated empirical probability of P(chunk),the probability of chunk2 followed by chunk1, 
-    in the generated sequence
-    In the case when chunk1 never occurs, output the probability of 0'''
-    n_total = 0
-    chunk1_count = 0
-    for candidate_chunk in partitioned_sequence: 
-        if candidate_chunk == chunk:
-            chunk1_count +=1
-
-    if chunk1_count>0:return chunk1_count/len(partitioned_sequence)
-    else:return 0.0
     
     
 
@@ -1378,7 +1466,357 @@ def eval_same_beginning(head, T, last_chunk):
         return p_1,p_2,p_3,p_4
 
 
+def DFT(p = [0.25,0.30,0.20,0.25],right_choice_index = 1):
+    '''right choice: the index of the correct choice, matched with the probabilities'''
+    # parameters are fixed ahead of the time. 
+    n_step = 100 # the number of iteration steps
+    timeunit = 0.2 # 0.2 100ms(20ms) per iteration step
+    timeline = [0.0]
+    path = np.zeros([4,n_step])# trace of path for the drift diffusion walk. 
+    winning_choice_index = None
+    crossing_times = []
+    v_instruction = 0.5 # drift rate for the instruction press: evidence/100ms 
+    v_internal = (1.0-v_instruction)/3.0 # drift rate for the none-instructional press 
+    sigma = 0.03# another parameter 0.6?
+    eps = 0.01
+    b = 1 # boundary, a cross indicates that a drift decision is being made. 
+
+            
+    for i in range(0, len(p)):  
+        if p[i] <=eps:path[i,0]= np.log(eps) # initialization, evidence starts from np.log(p)
+        else: path[i,0]= np.log(p[i])        
+        
+        # adapt drift rate to correct key
+        if i == right_choice_index:
+            v = np.random.normal(v_instruction, sigma, 1) 
+            while v<=0:
+                v = np.random.normal(v_instruction, sigma, 1) 
+        else:
+            v = np.random.normal(v_internal, sigma, 1) # sample normal distribution of drift speed
+            while v<=0:
+                v = np.random.normal(v_internal, sigma, 1) # sample normal distribution of drift speed
+        crossing_time = (b-path[i,0])/v[0] # time needed to cross the threshold
+        crossing_times.append(crossing_time)
+        
+    winning_choice_index = np.argmin(crossing_times)
+    crossing_time = min(crossing_times)    
+    return crossing_time, winning_choice_index # translate into ms unit
+
+    
+
+
+
+
+def eval_M_T_from_original_sequence(M,T,original_sequence):
+    bag_of_chunks = M.index.tolist()
+    '''checked'''
+    '''Get the estimated empirical probability of P(chunk2|chunk1),the probability of chunk2 followed by chunk1, 
+    in the generated sequence
+    In the case when chunk1 never occurs, output the probability of 0'''
+    chunk1_count = 0
+    chunk1_chunk2 = 0
+    # the transition probability from chunk1 to chunk2
+    # get P(chunk2|chunk1)
+    not_over = True
+    i = 0
+    for candidate_chunk in partitioned_sequence: 
+        if candidate_chunk == chunk1:
+            chunk1_count +=1
+            if i+1 < len(partitioned_sequence):
+                candidate2 = partitioned_sequence[i+1]
+                if candidate2 == chunk2:
+                    chunk1_chunk2+=1
+        i = i+1
+    if chunk1_count>0:
+        return chunk1_chunk2/chunk1_count
+    else:
+        return 0.0 # returns 0 if there is no occurrance for the first probabilility
+
+    '''Get the estimated empirical probability of P(chunk),the probability of chunk2 followed by chunk1, 
+    in the generated sequence
+    In the case when chunk1 never occurs, output the probability of 0'''
+    n_total = 0
+    chunk1_count = 0
+    for candidate_chunk in partitioned_sequence: 
+        if candidate_chunk == chunk:
+            chunk1_count +=1
+
+    if chunk1_count>0:return chunk1_count/len(partitioned_sequence)
+    else:return 0.0
+
+   
+
+
+def sample_exp1_sequence_from_participants(groupcond):
+    # sample instruction sequence from random participants to train the chunking model
+    subjectid = list(chunks_ts[groupcond]['inst'].keys())
+    this_id = np.random.choice(subjectid)
+    return chunks_ts[groupcond]['inst'][this_id]['training']
+
+
+def n_occurrance_ck(chunk,sck):
+    '''Measures the number of occurrance for sck within a chunk'''
+    if len(sck)>len(chunk):
+        return 0 
+    else:
+        i = 0
+        freq = 0
+        end = False
+        while end == False:
+            if chunk[i:min(i+len(sck),len(chunk))] == sck:
+                freq = freq + 1
+            i = i + 1
+            if i >=len(chunk):
+                end = True
+    return freq
+
+
+def partition_seq_hastily(this_sequence,bag_of_chunks):
+    c = 1
+    '''checked'''
+    # find the maximal chunk that fits the sequence
+    # what to do when the bag of chunks does not partition the sequence?? 
+
+    i = 0
+    end_of_sequence = False
+    partitioned_sequence = []
+    true_chunk = None
+    while end_of_sequence == False:
+        for chunk in bag_of_chunks: 
+            this_chunk = json.loads(chunk)
+            if this_sequence[i] == this_chunk[0]: 
+                partitioned_sequence.append(list(this_chunk))
+                true_chunk = this_chunk
+        i = i + len(true_chunk)
+        if i >= len(this_sequence):end_of_sequence = True
+
+    #print(bag_of_chunks)
+    M,T = initialize_MT(bag_of_chunks)
+
+    this_M, this_T = eval_M_T(M,T,partitioned_sequence)
+    #print(this_T)
+
+    correctness = []
+    reacted_press = []
+    rt = []
+    choice_probability = []
+    prev_obs = None
+    i = 0
+
+    # first item
+    item = partitioned_sequence[0]
+
+    p_1,p_2,p_3,p_4 = eval_same_beginning_M([], this_M)
+    choice_p = max([p_1,p_2,p_3,p_4])
+    instruction_index = this_sequence[i]-1
+    choice_rt, choice_index = DFT(p = [p_1,p_2,p_3,p_4],right_choice_index = instruction_index)
+    choice = choice_index + 1 
+    if choice == this_sequence[i]:correctness.append(1)
+    else:correctness.append(0) 
+    
+    rt.append(choice_rt)
+    reacted_press.append(choice)
+    choice_probability.append(choice_p)
+    i = i + 1
+
+    for j in range(1, len(item)):# choice probability always 1 inside a chunk
+        choice = item[j]
+        choice_p = 1
+        #choice_rt = -c*np.log(choice_p)    
+        choice_index = choice-1
+        ps = [0,0,0,0]
+        ps[choice_index] = 1
+        choice_p = 1
+        instruction_index = this_sequence[i]-1
+        choice_rt, choice_index = DFT(p = ps,right_choice_index = instruction_index)
+        choice = choice_index + 1 
+        if choice == this_sequence[i]:correctness.append(1)
+        else:correctness.append(0)  
+        rt.append(choice_rt)
+        reacted_press.append(choice)
+        choice_probability.append(choice_p)
+        i = i + 1
+        
+    prev_obs = str(item)
+
+    for item in partitioned_sequence[1:]:
+        p_1,p_2,p_3,p_4 = eval_same_beginning([], this_T, prev_obs)
+        #print('p 1 2 3 4 ', p_1, p_2, p_3, p_4)
+        choice_p = max([p_1,p_2,p_3,p_4])
+        instruction_index = this_sequence[i]-1
+        choice_rt, choice_index = DFT(p = [p_1,p_2,p_3,p_4],right_choice_index = instruction_index)
+        choice = choice_index + 1 
+        
+        if i <= len(this_sequence)-1 and choice == this_sequence[i]:correctness.append(1)
+        else:correctness.append(0) 
+        rt.append(choice_rt)
+        reacted_press.append(choice)
+        choice_probability.append(choice_p)
+        i = i + 1
+        for j in range(1, len(item)):# choice probability always 1 inside a chunk
+            choice = item[j]
+            choice_index = choice-1
+            ps = [0,0,0,0]
+            ps[choice_index] = 1 
+            choice_p = 1
+            if i <= len(this_sequence)-1:
+                if choice == this_sequence[i]:
+                    instruction_index = this_sequence[i]-1
+                    choice_rt, choice_index = DFT(p = ps,right_choice_index = instruction_index)
+                    choice = choice_index + 1 
+                    correctness.append(1)
+                else:correctness.append(0)  
+            rt.append(choice_rt)
+            reacted_press.append(choice)
+            choice_probability.append(choice_p)
+            i = i + 1        
+        prev_obs = str(item)
+    end_len = len(this_sequence)   
+
+    return correctness[0:end_len], rt[0:end_len], choice_probability[0:end_len],reacted_press[0:end_len],this_M, this_T
+
+
+
+def initialize_MT(cl):
+    best_T = pd.DataFrame(np.zeros([4,4]))
+    best_M = pd.DataFrame(np.zeros([4,1]))
+    best_T.columns = best_T.index = cl
+    best_M.index = cl
+    best_M.columns = ['P']
+    return best_M, best_T
+
+def chunk_purposal(best_M, best_T):
+        # proposing chunks
+    proposed_chunk_p = {}
+    for pre_chunk in best_T.index.tolist():
+        for post_chunk in best_T.index.tolist():
+            con_p = best_T.loc[pre_chunk][post_chunk]
+            p = con_p*best_M.loc[pre_chunk]['P']
+            new_chunk = json.loads(pre_chunk) + json.loads(post_chunk)
+            proposed_chunk_p[str(new_chunk)] = p
+            
+    return {k: v for k, v in sorted(proposed_chunk_p.items(), key=lambda item: item[1])}
+    
+    
+def learn_sequence(this_sequence, Print = False, L_threshold = 0, w = 0, nit = 4):
+    # In this implementation, the marginal probability at the end of learning for each chunk is the same as 
+    # the marginal probability of 1,2,3,4 at the beginning
+    # reaction time is calculated as probability of 1 for that particular chunk, even when the sequence
+    # instruction is different. 
+
+    bag_of_chunks = ['[1]','[2]','[3]','[4]']
+    best_M, best_T = initialize_MT(bag_of_chunks)
+    delta_L = 1000
+
+    correctness, rt, choice_probability,reacted_press,best_M, best_T = partition_seq_hastily(this_sequence,bag_of_chunks)
+    
+    L_old= w*np.mean(rt) + (1-w)*(1-np.mean(correctness))
+    best_rt,best_correctness, best_cp, best_reacted_press = np.mean(rt), np.mean(correctness), choice_probability, reacted_press
+    if Print: 
+        print('mean rt ', np.mean(rt), ' mean correctness ',np.mean(correctness))
+        print(L_old)
+
+    sorted_proposal = chunk_purposal(best_M, best_T)
+    # find the maximum transition probability, try chunking it
+    # evaluate the reaction time, and accuracy 
+    # if benefits reaction time, and accuracy, then set it to a chunk,
+    # re-evaluate the transition, 
+    it = 0
+    while it <=nit:
+        new_chunk = list(sorted_proposal.keys())[-1]
+        while new_chunk in bag_of_chunks:
+            sorted_proposal.pop(new_chunk)
+            new_chunk = list(sorted_proposal.keys())[-1]
+        
+        new_bag_of_chunks = bag_of_chunks.copy()
+        new_bag_of_chunks.append(new_chunk)
+        pre_chunk = None
+        for cc in new_bag_of_chunks:
+            if json.loads(cc)[0] == json.loads(new_chunk)[0] and json.loads(cc) != json.loads(new_chunk):
+                pre_chunk = cc
+                new_bag_of_chunks.remove(cc)
+
+        # try to prevent cycling around 
+
+        correctness, rt, choice_probability,reacted_press,this_M, this_T = partition_seq_hastily(this_sequence,new_bag_of_chunks)
+        L_new = w*np.mean(rt) + (1-w)*(1-np.mean(correctness))# rt in the unit of 100ms
+        if Print and new_chunk == '[1, 2]':
+            print('======================================')
+            print('new_bag_of_chunks',new_bag_of_chunks )
+            print('mean rt ', np.mean(rt), ' mean correctness ',np.mean(correctness))
+            print('loss ',L_new)
+            print(L_new)
+            print(this_T)
+        delta_L = L_old - L_new 
+
+        if delta_L>=0:# decreasing loss
+            bag_of_chunks,L_old, best_M, best_T, best_rt,best_correctness,best_cp, best_reacted_press = new_bag_of_chunks, L_new, this_M, this_T, np.mean(rt),np.mean(correctness), choice_probability, reacted_press
+            sorted_proposal = chunk_purposal(best_M, best_T)
+            
+        it = it + 1
+
+    return best_M, best_T,bag_of_chunks,best_rt,best_correctness,best_cp, best_reacted_press
+
+def get_T_from_partitioned_sequence(chunk1,chunk2,partitioned_sequence):
+    '''checked'''
+    '''Get the estimated empirical probability of P(chunk2|chunk1),the probability of chunk2 followed by chunk1, 
+    in the generated sequence
+    In the case when chunk1 never occurs, output the probability of 0'''
+    chunk1_count = 0
+    chunk1_chunk2 = 0
+    # the transition probability from chunk1 to chunk2
+    # get P(chunk2|chunk1)
+    not_over = True
+    i = 0
+    for candidate_chunk in partitioned_sequence: 
+        if candidate_chunk == chunk1:
+            chunk1_count +=1
+            if i+1 < len(partitioned_sequence):
+                candidate2 = partitioned_sequence[i+1]
+                if candidate2 == chunk2:
+                    chunk1_chunk2+=1
+        i = i+1
+    if chunk1_count>0:
+        return chunk1_chunk2/chunk1_count
+    else:
+        return 0.0 # returns 0 if there is no occurrance for the first probabilility
+    
+def get_M_from_partitioned_sequence(chunk,partitioned_sequence):
+    '''checked'''
+
+
+    '''Get the estimated empirical probability of P(chunk),the probability of chunk2 followed by chunk1, 
+    in the generated sequence
+    In the case when chunk1 never occurs, output the probability of 0'''
+    n_total = 0
+    chunk1_count = 0
+    for candidate_chunk in partitioned_sequence: 
+        if candidate_chunk == chunk:
+            chunk1_count +=1
+
+    if chunk1_count>0:return chunk1_count/len(partitioned_sequence)
+    else:return 0.0
+    
+    
+# helper functions
+def eval_M_T(M,T,partitioned_sequence):
+    """checked"""
+    bag_of_chunks = M.index.tolist()
+    
+    for chunk in bag_of_chunks:
+        parsed_chunk = json.loads(chunk)
+        M.loc[chunk,'P'] = get_M_from_partitioned_sequence(parsed_chunk,partitioned_sequence)
+    for chunk1 in bag_of_chunks:
+        for chunk2 in bag_of_chunks:
+            parsed_chunk1 = json.loads(chunk1)
+            parsed_chunk2 = json.loads(chunk2)
+            T.loc[chunk1,chunk2] = get_T_from_partitioned_sequence(parsed_chunk1,parsed_chunk2,partitioned_sequence)
+    return M, T
+
+
+    
 def eval_same_beginning_M(head, M):
+    '''head: a subpart that has been parsed within the chunks. '''
     # given the observation of head, what is the probability of 1,2,3,4 following the head, according
     # to our internal model. 
     p_1 = 0
@@ -1408,184 +1846,64 @@ def eval_same_beginning_M(head, M):
     return p_1,p_2,p_3,p_4
 
 
+def reproduce_sequence_df(M,T,n_sample=1000):
+    sequence = []
+    s_last = np.random.choice(T.index.tolist())
+    sequence = sequence +json.loads(s_last)
+    for i in range(0,n_sample):
+        s_next = sample_df(M,T, s_last)
+#         print(s_next)
+        sequence += json.loads(s_next)
+        s_last = s_next
+    return sequence  
 
 
-# DFT
-def DFT(p = [0.25,0.30,0.20,0.25],right_choice_index = 1,Plot = False):
-    '''right choice: the index of the correct choice, matched with the probabilities'''
-    n_step = 1000 # is in ms. 
-    time = np.arange(0,n_step,1)
-    path = np.zeros([4,n_step])
-    winning_choice_index = None
-    crossing_time = n_step
-    v_instruction = 0.5 # parameter
-    v_internal = (1.0-v_instruction)/3.0 # drift rate
-    sigma = 0.6 # another parameter
+def sample_df(M,T, s_l):
+    """When it returns [], it means there is no prediction,
+        otherwise, returns the predicted sequence of certain length as a list
+        s_last: a string, of last stimuli, as the key to look up in the transition probability dictionary"""
+    # print('indeed sampling from distribution')
+    states = T.index.tolist()
+    prob =  list(T.loc[s_l])
+    state, prob = sample_from_list_distribution(states,prob)
+    if state == []:
+        states = M.index.tolist()
+        prob =  list(M['P'])
+        state, prob = sample_from_list_distribution(states,prob)
+    return state
+def conditional_KL(M1,T1,T2):
+    """compute conditional KL divergence between origial M1, T1, conditional M2, T2"""
+    """ Epsilon is used here to avoid conditional code for
+    checking that neither P nor Q is equal to 0. """
     eps = 0.000000001
-    b = 0 # boundary
+    EPS = np.ones(list(T1.to_numpy().shape))*eps
+    # return divergence
+    v_T1 = T1.to_numpy()
+    v_T1 = EPS + v_T1
+    v_T2 = T2.to_numpy()
+    v_T2 = EPS + v_T2
+    v_M1 = M1.to_numpy()
+    p_log_p_div_q = np.multiply(v_T1,np.log(v_T1/v_T2)) # element wise multiplication
+    div = np.sum(np.matmul(v_M1.transpose(),p_log_p_div_q))
+    return div
+
+def generateseq(groupcond,seql = 600):
+    seq = []
+    if groupcond == 'c2':
+        while len(seq) < seql:
+            seq = seq + np.random.choice([[1,2],[3],[4]])
+        return seq[0:seql]
+    if groupcond == 'c3':
+        while len(seq) < seql:
+            seq = seq + np.random.choice([[1,2,3],[4]])
+        return seq[0:seql]
+    if groupcond == 'ind':
+        while len(seq) < seql:
+            seq = seq + [np.random.choice([1,2,3,4])]
+        return seq[0:seql]
     
-    # initialization:
-    for i in range(0, len(p)):
-        if p[i] <=eps:path[i,0]= np.log(eps) 
-        else: path[i,0]= np.log(p[i])
-            
-    for i in range(0, len(p)):  
-        if i == right_choice_index:
-            v = v_instruction# drift rate
-        else:
-            v = v_internal
-        s = np.random.normal(v, sigma, n_step)
-        for j in range(1,n_step):
-            path[i,j]=path[i,j-1] +s[j]
-            if path[i,j]>=0: 
-                if j < crossing_time:
-                    crossing_time = j
-                    winning_choice_index = i
-    # returns the first time it crosses 0
-    if Plot: 
-        plt.plot(time,path[0,:])
-        plt.plot(time,path[1,:])
-        plt.plot(time,path[2,:])
-        plt.plot(time,path[3,:])
-#         plt.ylim([0,-np.log(0.20)])
-        plt.xlim([0,200])
-        plt.legend(['1','2','3','4'])
-    return crossing_time, winning_choice_index
-
-
-
-def partition_seq_hastily(this_sequence,bag_of_chunks):
-    c = 1
-    eps = 0.01
-    default_p = [eps,eps,eps,eps]
-    '''checked'''
-    # find the maximal chunk that fits the sequence
-    # what to do when the bag of chunks does not partition the sequence?? 
-
-    i = 0
-    end_of_sequence = False
-    partitioned_sequence = []
-    true_chunk = None
-    while end_of_sequence == False:
-        for chunk in bag_of_chunks: 
-            this_chunk = json.loads(chunk)
-            if this_sequence[i] == this_chunk[0]: 
-                partitioned_sequence.append(list(this_chunk))
-                true_chunk = this_chunk
-#             print('this_sequence', this_sequence[i:])
-#             print('this chunk', this_chunk[0])
-#         print(len(true_chunk), true_chunk)
-        i = i + len(true_chunk)
-        if i >= len(this_sequence):end_of_sequence = True
-
-
-    M = pd.DataFrame(np.zeros([len(bag_of_chunks),1]))
-    T = pd.DataFrame(np.zeros([len(bag_of_chunks),len(bag_of_chunks)]))
-    M.index  = bag_of_chunks
-    M.columns = ['P']
-    T.columns = T.index = bag_of_chunks
-
-    this_M, this_T = eval_M_T(M,T,partitioned_sequence)
     
-#     this_M, this_T = eval_M_T_from_original_sequence(M,T,original_sequence)
-#     print('this_sequence', this_sequence)
-#     print('partitioned_sequence', partitioned_sequence)
-#     print(this_M, this_T)
-
-    correctness = []
-    reacted_press = []
-    rt = []
-    choice_probability = []
-    prev_obs = None
-    i = 0
-
-    # first item
-    item = partitioned_sequence[0]
-
-    p_1,p_2,p_3,p_4 = eval_same_beginning_M([], this_M)
-    choice_p = max([p_1,p_2,p_3,p_4])
-    instruction_index = this_sequence[i]-1
-    choice_rt, choice_index = DFT(p = [p_1,p_2,p_3,p_4],right_choice_index = instruction_index)
-    choice = choice_index + 1 
-#     if choice_p<0.25:choice_p = 0.25
-#     choice_rt = -c*np.log(choice_p) 
-    if choice == this_sequence[i]:correctness.append(1)
-    else:correctness.append(0) 
     
-    rt.append(choice_rt)
-    reacted_press.append(choice)
-    choice_probability.append(choice_p)
-    i = i + 1
-
-
-    for j in range(1, len(item)):# choice probability always 1 inside a chunk
-        choice = item[j]
-        choice_p = 1
-#         if choice_p<0.25:choice_p = 0.25
-        choice_rt = -c*np.log(choice_p)
-    
-        choice_index = choice-1
-        ps = default_p.copy()
-        ps[choice_index] = 1 - 3*eps
-        choice_p = 1
-        instruction_index = this_sequence[i]-1
-        choice_rt, choice_index = DFT(p = ps,right_choice_index = instruction_index)
-        choice = choice_index + 1 
-        if choice == this_sequence[i]:correctness.append(1)
-        else:correctness.append(0)  
-        rt.append(choice_rt)
-        reacted_press.append(choice)
-        choice_probability.append(choice_p)
-        i = i + 1
-
-
-    prev_obs = str(item)
-
-
-    for item in partitioned_sequence[1:]:
-        p_1,p_2,p_3,p_4 = eval_same_beginning([], this_T, prev_obs)
-        choice_p = max([p_1,p_2,p_3,p_4])
-        instruction_index = this_sequence[i]-1
-        choice_rt, choice_index = DFT(p = [p_1,p_2,p_3,p_4],right_choice_index = instruction_index)
-        choice = choice_index + 1 
-        
-        if i <= len(this_sequence)-1 and choice == this_sequence[i]:correctness.append(1)
-        else:correctness.append(0) 
-        rt.append(choice_rt)
-        reacted_press.append(choice)
-        choice_probability.append(choice_p)
-        i = i + 1
-        for j in range(1, len(item)):# choice probability always 1 inside a chunk
-            choice = item[j]
-            choice_index = choice-1
-            ps = default_p.copy()
-            ps[choice_index] = 1 - 3*eps
-            choice_p = 1
-
-#             if choice_p<0.25:choice_p = 0.25
-#             choice_rt = -c*np.log(choice_p)
-            if i <= len(this_sequence)-1 and choice == this_sequence[i]:
-                instruction_index = this_sequence[i]-1
-                choice_rt, choice_index = DFT(p = ps,right_choice_index = instruction_index)
-                choice = choice_index + 1 
-                correctness.append(1)
-            else:correctness.append(0)  
-            rt.append(choice_rt)
-            reacted_press.append(choice)
-            choice_probability.append(choice_p)
-            i = i + 1
-            
-        prev_obs = str(item)
-    end_len = len(this_sequence)
-        # use the previous observation to predict the next elements.
-    return correctness[0:end_len], rt[0:end_len], choice_probability[0:end_len],reacted_press[0:end_len],this_M, this_T
-# print('this_sequence ',this_sequence)
-# print('partitioned sequence', partitioned_sequence)
-# print('correctnenss', correctness)
-# print(rt)
-# print('choice probability', choice_probability)
-# print('reacted press',reacted_press)
-
 
 
 

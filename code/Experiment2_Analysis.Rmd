@@ -16,8 +16,70 @@ library(lmerTest)
 library(stringi)
 library(stringr)
 library(lsr)
-dat<-read.csv('../data_plos_exp12/cleanedex2.csv')
+dat<-read.csv('../data/cleanedex2.csv')
 ```
+
+```{r}
+dataall<-dat
+
+ggplot(dataall, aes(x=timecollect)) +
+geom_histogram(binwidth = 10)+
+scale_x_continuous(limits = c(0,3000)) +
+#geom_vline(data=100, aes(xintercept=grp.mean),linetype="dashed")+
+labs(title="Reaction Time Histogram",x="Reaction Time (ms)")+
+theme_classic()
+sum(dataall$timecollect<1000)/length(dataall$timecollect)
+```
+
+```{r}
+#standard error function
+se<-function(x){sd(x)/sqrt(length(x))}
+
+#summarize data by condition
+dp<-ddply(dataall, ~id, summarize, acc=mean(correctcollect), se=se(correctcollect))
+
+ggplot(dp, aes(x=acc)) +
+geom_histogram(binwidth = 0.01)+
+scale_x_continuous(limits = c(0.7,1)) +
+#geom_vline(data=100, aes(xintercept=grp.mean),linetype="dashed")+
+labs(title="Accuracy Histogram",x="Accuracy")+
+theme_classic()
+
+sum(dp$acc>0.9)/length(dp$acc)
+```
+
+
+
+```{r}
+dataall<-subset(dat, trialinstruction=='f')
+
+ggplot(dataall, aes(x=timecollect),fill = trialinstruction,color = trialinstruction) +
+geom_histogram(binwidth = 10)+
+scale_x_continuous(limits = c(0,3000)) +
+labs(title="Reaction Time Histogram",x="Reaction Time (ms)")+
+theme_classic()
+sum(dataall$timecollect<750)/length(dataall$timecollect)
+```
+```{r}
+
+dataall<-subset(dat, trialinstruction=='a')
+
+#standard error function
+se<-function(x){sd(x)/sqrt(length(x))}
+
+#summarize data by condition
+dp<-ddply(dataall, ~id, summarize, acc=mean(correctcollect), se=se(correctcollect))
+
+ggplot(dp, aes(x=acc)) +
+geom_histogram(binwidth = 0.01)+
+scale_x_continuous(limits = c(0.7,1)) +
+#geom_vline(data=100, aes(xintercept=grp.mean),linetype="dashed")+
+labs(title="Accuracy Histogram",x="Accuracy")+
+theme_classic()
+
+sum(dp$acc>0.9)/length(dp$acc)
+```
+
 
 ```{r}
 #full data set without high RTs excluded
@@ -167,7 +229,7 @@ dat$keyassignment<-str_replace(dat$keyassignment, '\\]', '')
 dat$current<-dat$instructioncollect
 
 #last instruction
-dat$last<-c(1, paste(dat$instructioncollect[-nrow(dat)]))# I don't understand what is meant by -nrow(dat)??
+dat$last<-c(1, paste(dat$instructioncollect[-nrow(dat)]))
 
 #only look at neutral blocks
 dd<-subset(dat, trialinstruction=="n")
@@ -427,7 +489,7 @@ p4
 
 
 ```{r}
-ckfq<-read.csv('../data_plos_exp12/exp2cleaneddckfq.csv')
+ckfq<-read.csv('../data/exp2cleaneddckfq.csv')
 ckfq$condition<-ifelse(ckfq$condition=="fast", "Fast", "Accurate")
 #ckfq$condition<-ifelse(ckfq$condition=="accurate", "Accurate", ckfq$condition)
 
@@ -489,7 +551,7 @@ anova(m1,m2)
 
 
 ```{r}
-ckru<-read.csv('../data_plos_exp12/chunkreusep.csv')
+ckru<-read.csv('../data/chunkreusep.csv')
 ckru<-subset(ckru, condition %in% c('Accurate', 'Fast'))
 
 #for true delta, we need to subtract control
@@ -549,9 +611,9 @@ anova(m1,m2)
 ```{r}
 library(stringi)
 library(stringr)
-library(lsr)
+#library(lsr)
 #via trial and error, I saw in which position they are in in this string, we assume A-B-C-D-A has transitions High-Medium-High-Medium
-dat<-read.csv('../data_plos_exp12/cleanedex2.csv')
+dat<-read.csv('../data/cleanedex2.csv')
 
 dat$keyassignment<-str_replace(dat$keyassignment, '\\[', '')
 dat$keyassignment<-str_replace(dat$keyassignment, '\\]', '')
@@ -661,4 +723,91 @@ As the condition goes from accurate to fast, reaction time descreases more with 
 
 Compared to the chunky transition, the truth condition have a more positive interaction with the fast conditgion on influencing the reaction time.
 The chunky transition, compared to the truth condition, have a negative interaction with the fast condition on influencing the reaction time, 
+
+```{r}
+dat<-read.csv('../data/cleanedex2.csv')
+
+dat$keyassignment<-str_replace(dat$keyassignment, '\\[', '')
+dat$keyassignment<-str_replace(dat$keyassignment, '\\]', '')
+
+dd<-subset(dat, trialinstruction=="n")
+
+dd$block<-rep(rep(c("first", "last"), each=200), length(unique(dd$id)))
+
+dd<-subset(dd, block=="last")
+
+#current instruction
+dd$current<-dd$instructioncollect
+
+#last instruction
+dd$last<-c(1, paste(dd$instructioncollect[-nrow(dd)]))
+
+a<-substr(dd$keyassignment, 2, 2)
+b<-substr(dd$keyassignment, 7, 7)
+c<-substr(dd$keyassignment, 12, 12)
+d<-substr(dd$keyassignment, 17, 17)
+
+dd$truth<-ifelse(paste(dd$last)==a & paste(dd$current)==b, 0.9, 0)
+dd$truth<-ifelse(paste(dd$last)==b & paste(dd$current)==c, 0.7, dd$truth)
+dd$truth<-ifelse(paste(dd$last)==c & paste(dd$current)==d, 0.9, dd$truth)
+dd$truth<-ifelse(paste(dd$last)==d & paste(dd$current)==a, 0.7, dd$truth)
+dd$truth<-ifelse(paste(dd$last)==a & paste(dd$current)==a| paste(dd$last)==a & paste(dd$current)==c|paste(dd$last)==a & paste(dd$current)==d,0.1/3 , dd$truth)
+dd$truth<-ifelse(paste(dd$last)==b & paste(dd$current)==a| paste(dd$last)==b & paste(dd$current)==b|paste(dd$last)==b & paste(dd$current)==d,0.1 , dd$truth)
+dd$truth<-ifelse(paste(dd$last)==c & paste(dd$current)==a| paste(dd$last)==c & paste(dd$current)==b|paste(dd$last)==c & paste(dd$current)==c,0.1/3 , dd$truth)
+dd$truth<-ifelse(paste(dd$last)==d & paste(dd$current)==d| paste(dd$last)==a & paste(dd$current)==c|paste(dd$last)==a & paste(dd$current)==d,0.1 , dd$truth)
+
+dd$chunky<-ifelse(paste(dd$last)==a & paste(dd$current)==b, 1, 0)
+dd$chunky<-ifelse(paste(dd$last)==b & paste(dd$current)==c, 1, dd$chunky)
+dd$chunky<-ifelse(paste(dd$last)==c & paste(dd$current)==d, 1, dd$chunky)
+dd$chunky<-ifelse(paste(dd$last)==d & paste(dd$current)==a, 1, dd$chunky)
+
+
+dd$id<-as.factor(dd$id)
+dd$condition<-ifelse(dd$condition==1, "accurate", "fast")
+dd$chunky<-as.numeric(scale(dd$chunky))
+dd$truth<-as.numeric(scale(dd$truth))
+head(dd)
+```
+
+```{r}
+dd$chunkresp<-ifelse(paste(dd$last)==a & paste(dd$userpress)==b, 1, 0)
+dd$chunkresp<-ifelse(paste(dd$last)==b & paste(dd$userpress)==c, 1, dd$chunkresp)
+dd$chunkresp<-ifelse(paste(dd$last)==c & paste(dd$userpress)==d, 1, dd$chunkresp)
+dd$chunkresp<-ifelse(paste(dd$last)==d & paste(dd$userpress)==a, 1, dd$chunkresp)
+dd$incorrect<-ifelse(dd$correctcollect==1, 0, 1)
+
+m1<-glmer(chunkresp~condition*correctcollect+(1|id), data=dd, family="binomial")
+```
+
+```{r}
+m2<-glmer(chunkresp~correctcollect+(1|id), data=dd, family="binomial")
+anova(m1,m2)
+```
+
+
+```{r}
+sm1<-summary(m1)
+m<-c(sm1$coefficients[2,1], sm1$coefficients[4,1]) 
+se<-c(sm1$coefficients[2,2], sm1$coefficients[4,2])
+dp<-data.frame(m, se, effect=c('Fast', 'Accurate'))
+p10 <- ggplot(dp, aes(y=m, x=effect, fill=effect)) +
+  stat_summary(fun.y = mean, geom = "bar", position = "dodge", color='black', width=0.5) + 
+  geom_point()+
+  geom_errorbar(aes(ymin=m-se, ymax=m+se),color='black', width = .25, position=position_dodge((width=0.9))) +
+  ylab(expression(beta))+
+  scale_fill_manual(values=(c("#808080",  "#808080")))+
+
+  xlab("Effect")+ 
+theme(text = element_text(size=21,  family="sans"), strip.background=element_blank(), legend.key=element_rect(color=NA), legend.position="none")+
+  guides(color=FALSE, shape=FALSE)+
+  geom_hline(yintercept=0)+
+  ggtitle("Chunky Responses")
+p10
+```
+
+
+```{r}
+
+```
+
 

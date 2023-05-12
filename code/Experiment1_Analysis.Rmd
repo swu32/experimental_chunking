@@ -16,12 +16,12 @@ library(lmerTest)
 library(stringi)
 library(stringr)
 library(lsr)
-dat<-read.csv('../data_plos_exp12/filtered_exp1.csv')
+dat<-read.csv('../data/filtered_exp1.csv')
 
 ```
 
-condition = 2: c2_key [12] [3] [4]
-condition = 1: c3_key [123] [4]
+condition = 2: Size 2_key [12] [3] [4]
+condition = 1: Size 3_key [123] [4]
 condition = 0: indep_key [1] [2] [3] [4]
 ```{r}
 #full data set without high RTs excluded
@@ -30,6 +30,35 @@ dl1<-dat
 dl<-subset(dat, timecollect<=1000)
 #what's the difference
 1-nrow(dl)/nrow(dl1)
+```
+```{r}
+dataall<-dat
+
+ggplot(dataall, aes(x=timecollect)) +
+geom_histogram(binwidth = 10)+
+scale_x_continuous(limits = c(0,3000)) +
+#geom_vline(data=100, aes(xintercept=grp.mean),linetype="dashed")+
+labs(title="Reaction Time Histogram",x="Reaction Time (ms)")+
+theme_classic()
+sum(dataall$timecollect<1000)/length(dataall$timecollect)
+
+```
+```{r}
+#standard error function
+se<-function(x){sd(x)/sqrt(length(x))}
+
+#summarize data by condition
+dp<-ddply(dataall, ~id, summarize, acc=mean(correctcollect), se=se(correctcollect))
+
+ggplot(dp, aes(x=acc)) +
+geom_histogram(binwidth = 0.005)+
+scale_x_continuous(limits = c(0.7,1)) +
+#geom_vline(data=100, aes(xintercept=grp.mean),linetype="dashed")+
+labs(title="Accuracy Histogram",x="Accuracy")+
+theme_classic()
+
+sum(dp$acc>0.9)/length(dp$acc)
+
 ```
 
 
@@ -52,8 +81,8 @@ dat$last<-c(1, paste(dat$instructioncollect[-nrow(dat)]))
 #only look at neutral blocks
 dd<-dat[dat$block %in% c(1,2,9,10),]
 dd$condition<-ifelse(dd$condition==0, "indep", dd$condition)
-dd$condition<-ifelse(dd$condition==1, "c3", dd$condition)
-dd$condition<-ifelse(dd$condition==2, "c2", dd$condition)
+dd$condition<-ifelse(dd$condition==1, "Size 3", dd$condition)
+dd$condition<-ifelse(dd$condition==2, "Size 2", dd$condition)
 
 #remove first trial per block, since that doesn't have previous instruction
 dd<-subset(dd, trialcollect!=1)
@@ -134,8 +163,8 @@ tsrtabcontrol<-subset(dd, controlab==1 & timecollect<=tselect & block=="last" )#
 #cond<-ddply(dat, ~id, summarize, cond=condition[201])$cond
 
 cond<-ifelse(ddply(dat, ~id, summarize, cond=condition[201])$cond==0, "Independent", "None")
-cond<-ifelse(ddply(dat, ~id, summarize, cond=condition[201])$cond==1, "c3", cond)
-cond<-ifelse(ddply(dat, ~id, summarize, cond=condition[201])$cond==2, "c2", cond)
+cond<-ifelse(ddply(dat, ~id, summarize, cond=condition[201])$cond==1, "Size 3", cond)
+cond<-ifelse(ddply(dat, ~id, summarize, cond=condition[201])$cond==2, "Size 2", cond)
 
 setting<-ddply(dat, ~id, summarize, cond=condition[201])
 
@@ -147,7 +176,7 @@ data_delta<-data.frame(dchange=c(dchunkab - dchunkabcontrol),cond=rep(cond, 1), 
 #data_delta$setting<-setting
 #data_delta$cond<-as.factor(data_delta$cond)
 data_delta$cond <- factor(data_delta$cond,                                    # Change ordering manually
-                  levels = c("Independent", "c2", "c3"))
+                  levels = c("Independent", "Size 2", "Size 3"))
 #fit without condition
 m1<-lm(dchange~1, data=data_delta)
 #with condition
@@ -166,9 +195,9 @@ dp<-ddply(data_delta, ~cond, summarize, m=mean(na.omit(dchange)),
           se=se(na.omit(dchange)))
 
 dp$cond <- factor(dp$cond,                                    # Change ordering manually
-                  levels = c("Independent", "c2", "c3"))
+                  levels = c("Independent", "Size 2", "Size 3"))
 #create plot
-p3 <- ggplot(dp, aes(y=m, x=cond, fill=cond)) +
+pb1 <- ggplot(dp, aes(y=m, x=cond, fill=cond)) +
   #mean 
   stat_summary(fun = mean, geom = "bar", position = "dodge", color='black', width=0.5) + 
   geom_point()+
@@ -194,11 +223,11 @@ p3 <- ggplot(dp, aes(y=m, x=cond, fill=cond)) +
   ggtitle("Chunky boost: AB")+
   coord_fixed(4.5)
 #show!
-p3
+pb1
 ```
 ```{r}
 data_delta$cond <- factor(data_delta$cond,                                    # Change ordering manually
-                  levels = c("Independent", "c2", "c3"))
+                  levels = c("Independent", "Size 2", "Size 3"))
 #fit without condition
 m1<-lm(dchange~1, data=data_delta)
 #with condition
@@ -208,8 +237,8 @@ anova(m1,m2)
 # Plot Chunk Frequency
 ```
 ```{r}
-data_delta$cond <- factor(data_delta$cond,                                    # Relevel to c2
-                  levels = c("c2", "Independent", "c3"))
+data_delta$cond <- factor(data_delta$cond,                                    # Relevel to Size 2
+                  levels = c("Independent","Size 2",  "Size 3"))
 m2<-lm(dchange~cond, data=na.omit(data_delta))
 #which one is better?
 summary(m2)
@@ -231,10 +260,10 @@ dp<-ddply(na.omit(data_delta), ~cond, summarize, m=mean(dchange),
           se=se(dchange))
 
 dp$cond <- factor(dp$cond,                                    # Change ordering manually
-                  levels = c("Independent", "c2", "c3"))
+                  levels = c("Independent", "Size 2", "Size 3"))
 
 #create plot
-p4 <- ggplot(dp, aes(y=m, x=cond, fill=cond)) +
+pb2 <- ggplot(dp, aes(y=m, x=cond, fill=cond)) +
   #mean 
   stat_summary(fun = mean, geom = "bar", position = "dodge", color='black', width=0.5) + 
   geom_point()+
@@ -260,12 +289,12 @@ p4 <- ggplot(dp, aes(y=m, x=cond, fill=cond)) +
   ggtitle("Chunky boost BC") +
   coord_fixed(4.5)
 #show!
-p4
+pb2
 ```
 
 ```{r}
 data_delta$cond <- factor(data_delta$cond,                                    # Change ordering manually
-                  levels = c("Independent", "c2", "c3"))
+                  levels = c("Independent", "Size 2", "Size 3"))
 #fit without condition
 m1<-lm(dchange~1, data=data_delta)
 #with condition
@@ -277,13 +306,13 @@ anova(m1,m2)
 
 
 ```{r}
-ckfq<-read.csv('../data_plos_exp12/exp1dckfq.csv')
+ckfq<-read.csv('../data/exp1dckfq.csv')
 
 ckfq$condition<-ifelse(ckfq$condition==0, "Independent", ckfq$condition)
-ckfq$condition<-ifelse(ckfq$condition==1, "c3", ckfq$condition)
-ckfq$condition<-ifelse(ckfq$condition==2, "c2", ckfq$condition)
+ckfq$condition<-ifelse(ckfq$condition==1, "Size 3", ckfq$condition)
+ckfq$condition<-ifelse(ckfq$condition==2, "Size 2", ckfq$condition)
 ckfq$condition <- factor(ckfq$condition,                                    # Change ordering manually
-                  levels = c("Independent", "c2", "c3"))
+                  levels = c("Independent", "Size 2", "Size 3"))
 ckfq$chunk<-ifelse(ckfq$chunk==123, "abc", ckfq$chunk)
 ckfq$chunk<-ifelse(ckfq$chunk==12, "ab", ckfq$chunk)
 ckfqab<-subset(ckfq, chunk=="ab")
@@ -296,10 +325,10 @@ dp<-ddply(na.omit(ckfqab), ~condition, summarize, m=mean(tr),
           se=se(tr))
 
 dp$cond <- factor(dp$cond,                                    # Change ordering manually
-                  levels = c("Independent", "c2", "c3"))
+                  levels = c("Independent", "Size 2", "Size 3"))
 
 #create plot
-p5 <- ggplot(dp, aes(y=m, x=cond, fill=cond)) +
+pa1 <- ggplot(dp, aes(y=m, x=cond, fill=cond)) +
   #mean 
   stat_summary(fun = mean, geom = "bar", position = "dodge", color='black', width=0.5) + 
   geom_point()+
@@ -326,12 +355,12 @@ p5 <- ggplot(dp, aes(y=m, x=cond, fill=cond)) +
   ggtitle("N Chunk AB") +
   coord_fixed(0.04)
 #show!
-p5
+pa1
 ```
 
 ```{r}
 ckfqab$condition <- factor(ckfqab$condition,                                    # Change ordering manually
-                  levels = c("Independent", "c2", "c3"))
+                  levels = c("Independent", "Size 2", "Size 3"))
 #null model doesn't contain condition, but fixed and random intercept
 mnull<-lm(tr~1 , data=ckfqab)
 #alternative model contains condition is fixed effect
@@ -341,12 +370,12 @@ anova(mnull, ma)#yes!
 ```
 
 ```{r}
-ckfq<-read.csv('../data_plos_exp12/exp1dckfq.csv')
+ckfq<-read.csv('../data/exp1dckfq.csv')
 
 ckfq$condition<-ifelse(ckfq$condition==0, "Independent", ckfq$condition)
-ckfq$condition<-ifelse(ckfq$condition==1, "c3", ckfq$condition)
-ckfq$condition<-ifelse(ckfq$condition==2, "c2", ckfq$condition)
-ckfq$condition<-factor(ckfq$condition, levels = c("Independent","c2","c3"))
+ckfq$condition<-ifelse(ckfq$condition==1, "Size 3", ckfq$condition)
+ckfq$condition<-ifelse(ckfq$condition==2, "Size 2", ckfq$condition)
+ckfq$condition<-factor(ckfq$condition, levels = c("Independent","Size 2","Size 3"))
 
 ckfq$chunk<-ifelse(ckfq$chunk==123, "abc", ckfq$chunk)
 ckfq$chunk<-ifelse(ckfq$chunk==12, "ab", ckfq$chunk)
@@ -360,10 +389,10 @@ dp<-ddply(na.omit(ckfqabc), ~condition, summarize, m=mean(tr),
           se=se(tr))
 
 dp$cond <- factor(dp$cond,                                    # Change ordering manually
-                  levels = c("Independent", "c2", "c3"))
+                  levels = c("Independent", "Size 2", "Size 3"))
 
 #create plot
-p6 <- ggplot(dp, aes(y=m, x=cond, fill=cond)) +
+pa2 <- ggplot(dp, aes(y=m, x=cond, fill=cond)) +
   #mean 
   stat_summary(fun = mean, geom = "bar", position = "dodge", color='black', width=0.5) + 
   geom_point()+
@@ -389,11 +418,11 @@ p6 <- ggplot(dp, aes(y=m, x=cond, fill=cond)) +
   ggtitle("N Chunk ABC")+
   coord_fixed(0.05)
 #show!
-p6
+pa2
 ```
 ```{r}
 ckfqabc$condition <- factor(ckfqabc$condition,                                    # Change ordering manually
-                  levels = c("Independent", "c2", "c3"))
+                  levels = c("Independent", "Size 2", "Size 3"))
 #null model doesn't contain condition, but fixed and random intercept
 mnull<-lm(tr~1 , data=ckfqabc)
 #alternative model contains condition is fixed effect
@@ -404,7 +433,7 @@ anova(mnull, ma)#yes!
 ```
 ```{r}
 ckfqabc$condition <- factor(ckfqabc$condition,                                    # Change ordering manually
-                  levels = c("c2", "Independent", "c3"))
+                  levels = c("Size 2", "Independent", "Size 3"))
 ma<-lm(tr~condition, data=ckfqabc)
 #is the alternative model significantly better than the null model
 summary(ma)
@@ -415,7 +444,7 @@ summary(ma)
 # Wasserstein Distance Calculation
 ```{r}
 #select neutral blocks
-dat<-read.csv('../data_plos_exp12/filtered_exp1.csv')
+dat<-read.csv('../data/filtered_exp1.csv')
 
 library(stringi)
 library(stringr)
@@ -460,12 +489,12 @@ for (i in 1:length(unique(dd$id))){
 }
 
 dc1$cond[dc1$cond ==0]<-'Independent'
-dc1$cond[dc1$cond ==1]<-'c3'
-dc1$cond[dc1$cond ==2]<-'c2'
+dc1$cond[dc1$cond ==1]<-'Size 3'
+dc1$cond[dc1$cond ==2]<-'Size 2'
 
 dc5$cond[dc5$cond ==0]<-'Independent'
-dc5$cond[dc5$cond ==1]<-'c3'
-dc5$cond[dc5$cond ==2]<-'c2'
+dc5$cond[dc5$cond ==1]<-'Size 3'
+dc5$cond[dc5$cond ==2]<-'Size 2'
 
 #library for Wasserstein
 library(transport)
@@ -490,7 +519,7 @@ dp<-ddply(m, ~cond+id, summarize, m=mean(diff, na.rm=TRUE))
 
 dp$m<-dp$m-m5$diff
 m$cond <- factor(m$cond,                                    # Change ordering manually
-                  levels = c("Independent", "c2", "c3"))
+                  levels = c("Independent", "Size 2", "Size 3"))
 #no effect
 m1<-lm(diff~1, data=na.omit(m))
 #effof condition
@@ -501,7 +530,7 @@ anova(m1, m2)
 ```{r}
 
 m$cond <- factor(m$cond,                                    # Change ordering manually
-                  levels = c("c3", "Independent", "c2"))
+                  levels = c("Size 3", "Independent", "Size 2"))
 m2<-lm(diff~cond, data=na.omit(m))
 #which one is better?
 summary(m2)
@@ -512,15 +541,15 @@ summary(m2)
 se<-function(x){sd(x)/sqrt(length(x))}
 
 dm<-ddply(dp, ~cond, summarize, m=mean(na.omit(m)), se=se(na.omit(m)))
-dm$se[1]<-se(na.omit(subset(dp, cond=='c2')$m))
-dm$se[2]<-se(na.omit(subset(dp, cond=='c3')$m))
+dm$se[1]<-se(na.omit(subset(dp, cond=='Size 2')$m))
+dm$se[2]<-se(na.omit(subset(dp, cond=='Size 3')$m))
 dm$se[3]<-se(na.omit(subset(dp, cond=='Independent')$m))
 
 dm$cond <- factor(dm$cond,                                    # Change ordering manually
-                  levels = c("Independent", "c2", "c3"))
+                  levels = c("Independent", "Size 2", "Size 3"))
 
 #plot
-p7 <- ggplot(dm, aes(y=m, x=cond, fill=cond)) +
+pc <- ggplot(dm, aes(y=m, x=cond, fill=cond)) +
   #mean
   stat_summary(fun = mean, geom = "bar", position = "dodge", color='black', width=0.5) + 
   #points
@@ -546,16 +575,16 @@ p7 <- ggplot(dm, aes(y=m, x=cond, fill=cond)) +
   ggtitle("Chunkiness")+
   coord_fixed(0.07)
 #show
-p7
+pc
 ```
 
 
 ```{r}
-ckfq<-read.csv('../data_plos_exp12/exp1dckfq.csv')
+ckfq<-read.csv('../data/exp1dckfq.csv')
 
 ckfq$condition<-ifelse(ckfq$condition==0, "Independent", ckfq$condition)
-ckfq$condition<-ifelse(ckfq$condition==1, "c3", ckfq$condition)
-ckfq$condition<-ifelse(ckfq$condition==2, "c2", ckfq$condition)
+ckfq$condition<-ifelse(ckfq$condition==1, "Size 3", ckfq$condition)
+ckfq$condition<-ifelse(ckfq$condition==2, "Size 2", ckfq$condition)
 
 ckfq$chunk<-ifelse(ckfq$chunk==123, "abc", ckfq$chunk)
 ckfq$chunk<-ifelse(ckfq$chunk==12, "ab", ckfq$chunk)
@@ -569,10 +598,10 @@ dp<-ddply(na.omit(ckfqabc), ~condition, summarize, m=mean(delta_c),
           se=se(delta_c))
 
 dp$cond <- factor(dp$cond,                                    # Change ordering manually
-                  levels = c("Independent", "c2", "c3"))
+                  levels = c("Independent", "Size 2", "Size 3"))
 
 #create plot
-p6 <- ggplot(dp, aes(y=m, x=cond, fill=cond)) +
+pe2 <- ggplot(dp, aes(y=m, x=cond, fill=cond)) +
   #mean 
   stat_summary(fun = mean, geom = "bar", position = "dodge", color='black', width=0.5) + 
   geom_point()+
@@ -600,11 +629,11 @@ p6 <- ggplot(dp, aes(y=m, x=cond, fill=cond)) +
   ggtitle("Chunk Increase ABC") +
   coord_fixed(0.3)
 #show!
-p6
+pe2
 ```
 ```{r}
 ckfqabc$condition <- factor(ckfqabc$condition,                                    # Change ordering manually
-                  levels = c("Independent", "c2", "c3"))
+                  levels = c("Independent", "Size 2", "Size 3"))
 #fit without condition
 m1<-lm(delta_c~1, data=ckfqabc)
 #with condition
@@ -615,18 +644,18 @@ anova(m1,m2)
 ```
 ```{r}
 ckfqabc$condition <- factor(ckfqabc$condition,                                    # Change ordering manually
-                  levels = c("c2", "Independent", "c3"))
+                  levels = c("Size 2", "Independent", "Size 3"))
 m2<-lm(delta_c~condition, data=na.omit(ckfqabc))
 summary(m2)
 ```
 
 
 ```{r}
-ckfq<-read.csv('../data_plos_exp12/exp1dckfq.csv')
+ckfq<-read.csv('../data/exp1dckfq.csv')
 
 ckfq$condition<-ifelse(ckfq$condition==0, "Independent", ckfq$condition)
-ckfq$condition<-ifelse(ckfq$condition==1, "c3", ckfq$condition)
-ckfq$condition<-ifelse(ckfq$condition==2, "c2", ckfq$condition)
+ckfq$condition<-ifelse(ckfq$condition==1, "Size 3", ckfq$condition)
+ckfq$condition<-ifelse(ckfq$condition==2, "Size 2", ckfq$condition)
 
 ckfq$chunk<-ifelse(ckfq$chunk==123, "abc", ckfq$chunk)
 ckfq$chunk<-ifelse(ckfq$chunk==12, "ab", ckfq$chunk)
@@ -640,10 +669,10 @@ dp<-ddply(na.omit(ckfqabc), ~condition, summarize, m=mean(delta_c),
           se=se(delta_c))
 
 dp$cond <- factor(dp$cond,                                    # Change ordering manually
-                  levels = c("Independent", "c2", "c3"))
+                  levels = c("Independent", "Size 2", "Size 3"))
 
 #create plot
-p6 <- ggplot(dp, aes(y=m, x=cond, fill=cond)) +
+pe1 <- ggplot(dp, aes(y=m, x=cond, fill=cond)) +
   #mean 
   stat_summary(fun = mean, geom = "bar", position = "dodge", color='black', width=0.5) + 
   geom_point()+
@@ -670,11 +699,11 @@ p6 <- ggplot(dp, aes(y=m, x=cond, fill=cond)) +
   ggtitle("Chunk Increase AB") +
   coord_fixed(0.3)
 #show!
-p6
+pe1
 ```
 ```{r}
 ckfqab$condition <- factor(ckfqab$condition,                                    # Change ordering manually
-                  levels = c("Independent", "c2", "c3"))
+                  levels = c("Independent", "Size 2", "Size 3"))
 #fit without condition
 m1<-lm(delta_c~1, data=ckfqab)
 #with condition
@@ -685,8 +714,11 @@ anova(m1,m2)
 ```
 
 ```{r}
-ckru<-read.csv('../data_plos_exp12/chunkreusep.csv')
+ckru<-read.csv('../data/chunkreusep.csv')
 ckru<-subset(ckru, condition %in% c('c2', 'c3', 'Independent'))
+
+ckru$condition<-ifelse(ckru$condition=='c2', "Size 2", ckru$condition)
+ckru$condition<-ifelse(ckru$condition=='c3', "Size 3", ckru$condition)
 
 #for true delta, we need to subtract control
 
@@ -696,10 +728,10 @@ dp<-ddply(na.omit(ckru), ~condition, summarize, m=mean(reuse_p),
           se=se(reuse_p))
 
 dp$condition <- factor(dp$condition,                                    # Change ordering manually
-                  levels = c("Independent", "c2", "c3"))
+                  levels = c("Independent", "Size 2", "Size 3"))
 
 #create plot
-p10 <- ggplot(dp, aes(y=m, x=condition, fill=condition)) +
+pf <- ggplot(dp, aes(y=m, x=condition, fill=condition)) +
   #mean 
   stat_summary(fun = mean, geom = "bar", position = "dodge", color='black', width=0.5) + 
   geom_point()+
@@ -725,11 +757,11 @@ p10 <- ggplot(dp, aes(y=m, x=condition, fill=condition)) +
   ggtitle("Chunk Reuse Probability")+
   coord_fixed(3)
 #show!
-p10
+pf
 ```
 ```{r}
 ckru$condition <- factor(ckru$condition,                                    # Change ordering manually
-                  levels = c("Independent", "c2", "c3"))
+                  levels = c("Independent", "Size 2", "Size 3"))
 #fit without condition
 m1<-lm(reuse_p~1, data=ckru)
 #with condition
@@ -740,7 +772,7 @@ anova(m1,m2)
 ```
 ```{r}
 ckru$condition <- factor(ckru$condition,                                    # Change ordering manually
-                  levels = c("c2", "Independent", "c3"))
+                  levels = c("Size 2", "Independent", "Size 3"))
 m2<-lm(reuse_p~condition, data=na.omit(ckru))
 #which one is better?
 summary(m2)
@@ -751,7 +783,7 @@ summary(m2)
 library(stringi)
 library(stringr)
 library(lsr)
-dat<-read.csv('../data_plos_exp12/filtered_exp1.csv')
+dat<-read.csv('../data/filtered_exp1.csv')
 #remove braces
 dat$keyassignment<-str_replace(dat$keyassignment, '\\[', '')
 dat$keyassignment<-str_replace(dat$keyassignment, '\\]', '')
@@ -759,8 +791,8 @@ dat$keyassignment<-str_replace(dat$keyassignment, '\\]', '')
 dd<-dat[dat$block %in% c(1,2,9,10),]
 
 dd$condition<-ifelse(dd$condition==0, "indep", dd$condition)
-dd$condition<-ifelse(dd$condition==1, "c3", dd$condition)
-dd$condition<-ifelse(dd$condition==2, "c2", dd$condition)
+dd$condition<-ifelse(dd$condition==1, "Size 3", dd$condition)
+dd$condition<-ifelse(dd$condition==2, "Size 2", dd$condition)
 
 
 #get A, B, C, and D
@@ -840,15 +872,15 @@ m<-c(sm1$coefficients[7,1], sm1$coefficients[8,1], sm1$coefficients[9,1], sm1$co
 se<-c(sm1$coefficients[7,2], sm1$coefficients[8,2], sm1$coefficients[9,2], sm1$coefficients[10,2], sm1$coefficients[11,2], sm1$coefficients[12,2]) 
 
 #data frame
-dp<-data.frame(m, se, effect=c('c2:C2', 'c3:C2', 'c2:TR','c3:TR','c2:C3','c3:C3'))
+dp<-data.frame(m, se, effect=c('Size 2:C2', 'Size 3:C2', 'Size 2:TR','Size 3:TR','Size 2:C3','Size 3:C3'))
 #effect
-dp$effect<-factor(dp$effect, levels=c('c2:C2', 'c3:C2', 'c2:TR','c3:TR','c2:C3','c3:C3'))
+dp$effect<-factor(dp$effect, levels=c('Size 2:C2', 'Size 3:C2', 'Size 2:TR','Size 3:TR','Size 2:C3','Size 3:C3'))
 ```
 
 ```{r}
 
 #show plot
-p6 <- ggplot(dp, aes(y=m, x=effect, fill=effect)) +
+pd <- ggplot(dp, aes(y=m, x=effect, fill=effect)) +
   #show mean
   stat_summary(fun = mean, geom = "bar", position = "dodge", color='black', width=0.5) + 
   #point
@@ -874,7 +906,7 @@ p6 <- ggplot(dp, aes(y=m, x=effect, fill=effect)) +
   #title
   ggtitle("Chunky RTs")
 #show!
-p6
+pd
 ```
 
 
