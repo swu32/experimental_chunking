@@ -8,4 +8,7 @@
 
 /data/modelcomparisonfinegrained.csv
 /data/modelcomparisonfinegrained.pkl
+*.DS_Store
+
+/code/.ipynb_checkpoints/*
 
